@@ -32,7 +32,9 @@ pip install -r requirements.txt
 Run this from Isaac Sim's Python launcher:
 
 ```bash
-./python.sh isaacsim_dual_robot_preview.py --gripper both
+cd ~/.local/share/ov/pkg
+./python.sh /home/wpai/DreamBC/isaacsim_dual_robot_preview.py --gripper both
+# ./python.sh isaacsim_dual_robot_preview.py --gripper both
 ```
 
 Options:

@@ -13,6 +13,12 @@ from pathlib import Path
 from isaacsim import SimulationApp
 
 
+URDF_EXTENSION_CANDIDATES = (
+    "isaacsim.asset.importer.urdf",
+    "omni.importer.urdf",
+)
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Preview Panda URDF variants with explicit gripper types in Isaac Sim."
@@ -27,9 +33,88 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _import_urdf(urdf_path: Path, dest_path: str):
+def _enable_first_available_extension(enable_extension) -> str:
+    for extension_name in URDF_EXTENSION_CANDIDATES:
+        try:
+            enable_extension(extension_name)
+            return extension_name
+        except Exception as exc:
+            print(f"Could not enable {extension_name}: {exc}")
+    raise RuntimeError(
+        "Could not enable a URDF importer extension. Tried: "
+        + ", ".join(URDF_EXTENSION_CANDIDATES)
+    )
+
+
+def _import_urdf_bindings():
+    try:
+        from isaacsim.asset.importer.urdf import _urdf
+
+        return _urdf
+    except ModuleNotFoundError:
+        from omni.importer.urdf import _urdf
+
+        return _urdf
+
+
+def _world_child_paths(stage) -> set[str]:
+    world_prim = stage.GetPrimAtPath("/World")
+    if not world_prim.IsValid():
+        return set()
+    return {child.GetPath().pathString for child in world_prim.GetChildren()}
+
+
+def _top_level_world_path(path: str) -> str:
+    parts = path.strip("/").split("/")
+    if len(parts) >= 2 and parts[0] == "World":
+        return f"/World/{parts[1]}"
+    return path
+
+
+def _move_imported_prim(imported_path: str, target_path: str, before_paths: set[str]) -> str:
     import omni.kit.commands
-    from omni.importer.urdf import _urdf
+    import omni.usd
+    from pxr import UsdGeom
+
+    stage = omni.usd.get_context().get_stage()
+    after_paths = _world_child_paths(stage)
+    new_paths = sorted(after_paths - before_paths)
+    imported_root_path = _top_level_world_path(imported_path)
+
+    if stage.GetPrimAtPath(imported_root_path).IsValid():
+        source_path = imported_root_path
+    elif len(new_paths) == 1:
+        source_path = new_paths[0]
+    else:
+        raise RuntimeError(
+            "Could not identify imported root prim. "
+            f"imported_path={imported_path}, new_world_paths={new_paths}"
+        )
+
+    if stage.GetPrimAtPath(target_path).IsValid():
+        result, _ = omni.kit.commands.execute("DeletePrims", paths=[target_path])
+        if not result:
+            raise RuntimeError(f"Failed to delete existing prim: {target_path}")
+
+    UsdGeom.Xform.Define(stage, target_path)
+    child_path = f"{target_path}/Robot"
+    result, _ = omni.kit.commands.execute(
+        "MovePrim",
+        path_from=source_path,
+        path_to=child_path,
+        keep_world_transform=False,
+    )
+    if not result:
+        raise RuntimeError(f"Failed to move imported prim from {source_path} to {child_path}")
+    return target_path
+
+
+def _import_urdf(urdf_path: Path, target_path: str):
+    import omni.kit.commands
+    import omni.usd
+
+    _urdf = _import_urdf_bindings()
+    stage = omni.usd.get_context().get_stage()
 
     import_config = _urdf.ImportConfig()
     import_config.merge_fixed_joints = False
@@ -40,15 +125,20 @@ def _import_urdf(urdf_path: Path, dest_path: str):
     import_config.distance_scale = 1.0
     import_config.density = 0.0
 
+    if stage.GetPrimAtPath(target_path).IsValid():
+        result, _ = omni.kit.commands.execute("DeletePrims", paths=[target_path])
+        if not result:
+            raise RuntimeError(f"Failed to delete existing prim before import: {target_path}")
+
+    before_paths = _world_child_paths(stage)
     result, imported_path = omni.kit.commands.execute(
         "URDFParseAndImportFile",
         urdf_path=str(urdf_path),
         import_config=import_config,
-        dest_path=dest_path,
     )
     if not result:
         raise RuntimeError(f"Failed to import URDF: {urdf_path}")
-    return imported_path
+    return _move_imported_prim(imported_path, target_path, before_paths)
 
 
 def main() -> None:
@@ -56,10 +146,16 @@ def main() -> None:
     sim_app = SimulationApp({"headless": args.headless})
 
     from pxr import Gf, UsdGeom
-    from omni.isaac.core import World
-    from omni.isaac.core.utils.extensions import enable_extension
 
-    enable_extension("omni.importer.urdf")
+    try:
+        from isaacsim.core.api import World
+        from isaacsim.core.utils.extensions import enable_extension
+    except ModuleNotFoundError:
+        from omni.isaac.core import World
+        from omni.isaac.core.utils.extensions import enable_extension
+
+    enabled_extension = _enable_first_available_extension(enable_extension)
+    print(f"Enabled URDF importer extension: {enabled_extension}")
 
     project_root = Path(__file__).resolve().parent
     franka_hand_urdf = project_root / "urdf_models" / "mmp_panda" / "mmp_panda.urdf"
