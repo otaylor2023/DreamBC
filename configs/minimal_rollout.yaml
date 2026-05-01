@@ -1,0 +1,74 @@
+project_root: .
+
+sim:
+  headless: false
+  steps: 120
+  warmup_steps: 20
+  save_every: 10
+  stage_units_in_meters: 1.0
+  require_cameras: false
+  keep_open_after_rollout: true
+
+robot:
+  gripper: robotiq
+  target_path: /World/Panda
+  articulation_child: Robot
+  locked_base_joint_names: [base_prismatic_x, base_prismatic_y, base_revolute, base_prismatic_link0]
+  arm_joint_names: [joint1, joint2, joint3, joint4, joint5, joint6, joint7]
+  gripper_joint_names:
+    franka: [finger_joint1, finger_joint2]
+    robotiq: [finger_joint]
+  urdfs:
+    franka: urdf_models/mmp_panda/mmp_panda.urdf
+    robotiq: urdf_models/mmp_panda/mmp_panda_robotiq85.urdf
+
+scene:
+  table:
+    prim_path: /World/Table
+    name: table
+    position: [0.55, 0.0, 0.35]
+    scale: [0.80, 0.55, 0.06]
+    color: [0.45, 0.45, 0.42]
+  test_cube:
+    prim_path: /World/TestCube
+    name: test_cube
+    position: [0.55, 0.0, 0.45]
+    scale: [0.05, 0.05, 0.05]
+    color: [0.9, 0.12, 0.08]
+
+cameras:
+  exterior_image_1_left:
+    prim_path: /World/Cameras/exterior_image_1_left
+    position: [1.15, -1.10, 0.95]
+    orientation_euler_xyz_degrees: [62.0, 0.0, 43.0]
+    frequency: 20
+    resolution: [224, 224]
+  exterior_image_2_left:
+    prim_path: /World/Cameras/exterior_image_2_left
+    position: [1.10, 0.95, 0.85]
+    orientation_euler_xyz_degrees: [64.0, 0.0, 136.0]
+    frequency: 20
+    resolution: [224, 224]
+  wrist_image_left:
+    prim_path: /World/Cameras/wrist_image_left
+    position: [0.40, -0.22, 0.70]
+    orientation_euler_xyz_degrees: [72.0, 0.0, 18.0]
+    frequency: 20
+    resolution: [224, 224]
+
+fake_policy:
+  phase_scale: 0.045
+  arm_offsets: [0.04, -0.03, 0.03, -0.04, 0.02, 0.015, -0.02]
+  gripper_period_steps: 40
+  gripper_open_target: 0.06
+  gripper_closed_target: 0.02
+
+output:
+  dir: rollouts/minimal_rollout
+  timestamp_format: "%Y%m%d_%H%M%S"
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${project_root}/outputs/hydra/${now:%Y%m%d_%H%M%S}
