@@ -14,7 +14,16 @@ robot:
   target_path: /World/Panda
   articulation_child: Robot
   locked_base_joint_names: [base_prismatic_x, base_prismatic_y, base_revolute, base_prismatic_link0]
+  initial_locked_base_joint_positions:
+    base_prismatic_x: 0.0
+    base_prismatic_y: 0.0
+    base_revolute: -1.5708
+    base_prismatic_link0: 0.0
   arm_joint_names: [joint1, joint2, joint3, joint4, joint5, joint6, joint7]
+  initial_arm_joint_positions: [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
+  initial_gripper_position:
+    franka: 0.04
+    robotiq: 0.06
   gripper_joint_names:
     franka: [finger_joint1, finger_joint2]
     robotiq: [finger_joint]
@@ -26,36 +35,46 @@ scene:
   table:
     prim_path: /World/Table
     name: table
-    position: [0.55, 0.0, 0.35]
+    position: [0.55, 0.0, 0.0]
     scale: [0.80, 0.55, 0.06]
     color: [0.45, 0.45, 0.42]
   test_cube:
     prim_path: /World/TestCube
     name: test_cube
-    position: [0.55, 0.0, 0.45]
+    position: [0.55, 0.0, 0.1]
     scale: [0.05, 0.05, 0.05]
     color: [0.9, 0.12, 0.08]
 
+# Camera layout follows DROID / pi05_droid *semantics* (not exact hardware extrinsics):
+# - Exterior: fixed third-person, ~25–45° depression, robot + table + objects in frame (RLDS uses 320×180).
+# - Wrist: rigidly attached to the gripper chain, viewing the grasp / workspace ahead of the tool.
 cameras:
   exterior_image_1_left:
     prim_path: /World/Cameras/exterior_image_1_left
-    position: [1.15, -1.10, 0.95]
-    orientation_euler_xyz_degrees: [62.0, 0.0, 43.0]
+    # -Y side, pulled back and raised so the arm is not cropped out (narrow FOV close-ups hurt VLAs).
+    position: [0.05, -1.58, 1.22]
+    look_at: [0.55, 0.0, 0.20]
     frequency: 20
     resolution: [224, 224]
   exterior_image_2_left:
     prim_path: /World/Cameras/exterior_image_2_left
-    position: [1.10, 0.95, 0.85]
-    orientation_euler_xyz_degrees: [64.0, 0.0, 136.0]
+    # +Y side, complementary exterior (similar to DROID's second ZED station view).
+    position: [0.05, 1.52, 1.16]
+    look_at: [0.55, 0.0, 0.20]
     frequency: 20
     resolution: [224, 224]
   wrist_image_left:
-    prim_path: /World/Cameras/wrist_image_left
-    position: [0.40, -0.22, 0.70]
-    orientation_euler_xyz_degrees: [72.0, 0.0, 18.0]
+    # Robotiq local +Z points down toward the fingers in the tabletop home pose.
+    # Mount above and to the side so the camera ray does not pass through the gripper base.
+    prim_path: /World/Panda/Robot/robotiq_85_base_link/wrist_image_left
+    translation: [-0.12, -0.16, -0.08]
+    look_at: [0.118, -0.125, 0.188]
+    # Moderate wrist FOV: wide enough to keep fingertips in view, narrower than the debug fisheye-like setting.
+    focal_length: 1.5
+    # Keep the near plane close enough for wrist-mounted views of the gripper and table.
+    clipping_range: [0.01, 100.0]
     frequency: 20
     resolution: [224, 224]
-
 fake_policy:
   phase_scale: 0.045
   arm_offsets: [0.04, -0.03, 0.03, -0.04, 0.02, 0.015, -0.02]
@@ -63,9 +82,44 @@ fake_policy:
   gripper_open_target: 0.06
   gripper_closed_target: 0.02
 
+policy:
+  kind: fake
+  pi05_droid_remote:
+    host: localhost
+    port: 8000
+    prompt: pick up the red cube
+    execute: false
+    exterior_image_key: exterior_image_1_left
+    wrist_image_key: wrist_image_left
+    image_size: 224
+    action_mode: joint_velocity_target
+    action_hz: 15
+    max_joint_velocity: 0.2
+    binarize_gripper: true
+    gripper_open_target: 0.06
+    gripper_closed_target: 0.02
+
 output:
   dir: rollouts/minimal_rollout
   timestamp_format: "%Y%m%d_%H%M%S"
+
+debug:
+  print_stage_tree: false
+  stage_tree_root: /World/Panda/Robot
+  stage_tree_max_depth: 3
+  print_camera_poses: false
+  print_prim_positions: false
+  prim_position_paths:
+    - /World/Panda/Robot/link7
+    - /World/Panda/Robot/robotiq_85_base_link
+    - /World/Panda/Robot/left_outer_finger
+    - /World/Panda/Robot/right_outer_finger
+    - /World/Panda/Robot/left_inner_finger
+    - /World/Panda/Robot/right_inner_finger
+    - /World/Panda/Robot/robotiq_85_base_link/wrist_image_left
+    - /World/Table
+    - /World/TestCube
+  add_camera_markers: false
 
 hydra:
   job:

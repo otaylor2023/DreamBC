@@ -16,7 +16,7 @@ Current repo status:
 
 - `urdf_models/` - robot URDFs and meshes (Panda + Robotiq variants).
 - `isaacsim_dual_robot_preview.py` - Isaac Sim script to preview robots side-by-side.
-- `isaacsim_minimal_rollout.py` - Isaac Sim script that records camera/joint observations while executing a fake policy.
+- `isaacsim_minimal_rollout.py` - Isaac Sim script that records camera/joint observations while executing a fake policy or a remote pi0.5 DROID policy.
 - `isaacsim_camera_smoke_test.py` - Minimal single-camera health check for Replicator/annotator readiness.
 - `dreambc_isaac/` - Shared Isaac Sim helpers for app startup, URDF import, camera setup, scene setup, robot joints, and local compatibility patches.
 - `scripts/bootstrap_env.sh` - Creates or updates the `dreambc` conda environment and installs the Isaac Sim 5.1-compatible PyTorch wheel set.
@@ -99,9 +99,9 @@ Options:
 
 ### 5) Run a minimal Isaac Sim rollout
 
-This script does not load pi0.5 yet. It creates the basic loop that pi0.5 will
-eventually plug into: camera images + joint state -> fake policy action -> robot
-step -> rollout artifacts.
+This script provides the basic loop used by both the fake policy and the remote
+pi0.5 DROID policy: camera images + joint state -> policy action -> robot step
+-> rollout artifacts.
 
 Run the rollout with the UI:
 
@@ -131,6 +131,13 @@ The rollout script uses Hydra config:
 /home/wpai/DreamBC/configs/minimal_rollout.yaml
 ```
 
+Policy selection:
+
+```bash
+python isaacsim_minimal_rollout.py policy.kind=fake
+python isaacsim_minimal_rollout.py policy.kind=pi05_droid_remote
+```
+
 Common overrides:
 
 ```bash
@@ -156,6 +163,148 @@ Do not use Isaac Sim's `./python.sh` for the Hydra rollout script unless that
 Python environment also has `hydra-core`, `omegaconf`, `attrs`, and `pillow`
 installed. The recommended path is `source scripts/isaacsim_shell.sh`, then
 `python ...`.
+
+### 6) Run a pi0.5 DROID policy server
+
+Keep OpenPI/pi0.5 in a separate environment from the Isaac Sim `dreambc`
+environment. The Isaac Sim environment is sensitive to NumPy, PyTorch, and
+library-path versions; the pi0.5 server should run in its own OpenPI `uv`
+environment and DreamBC should connect to it over websocket.
+
+Install and sync OpenPI outside conda/Isaac shells:
+
+```bash
+cd /home/wpai/DreamBC
+git clone --recurse-submodules https://github.com/Physical-Intelligence/openpi.git
+cd /home/wpai/DreamBC/openpi
+conda deactivate || true
+rm -rf .venv
+unset CC CXX CFLAGS CPPFLAGS LDFLAGS
+GIT_LFS_SKIP_SMUDGE=1 uv sync
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
+```
+
+If `evdev` fails to build with an error such as `KEY_LINK_PHONE undeclared`,
+you are probably still using a conda compiler from `(base)`. Leave conda and
+retry, or force the system compiler:
+
+```bash
+cd /home/wpai/DreamBC/openpi
+rm -rf .venv
+unset CFLAGS CPPFLAGS LDFLAGS
+CC=/usr/bin/gcc CXX=/usr/bin/g++ GIT_LFS_SKIP_SMUDGE=1 uv sync
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
+```
+
+Start the pi0.5 DROID server:
+
+```bash
+cd /home/wpai/DreamBC/openpi
+uv run scripts/serve_policy.py policy:checkpoint \
+  --policy.config=pi05_droid \
+  --policy.dir=gs://openpi-assets/checkpoints/pi05_droid
+```
+
+The server is ready when it prints:
+
+```text
+server listening on 0.0.0.0:8000
+```
+
+The first inference call can be slow because JAX compiles and warms up the
+model. Later action-chunk calls should be much faster.
+
+### 7) Install the OpenPI client in the Isaac environment
+
+Use a second terminal for DreamBC/Isaac Sim:
+
+```bash
+cd /home/wpai/DreamBC
+source scripts/isaacsim_shell.sh
+cd /home/wpai/DreamBC/openpi/packages/openpi-client
+pip install -e .
+cd /home/wpai/DreamBC
+```
+
+Only install the lightweight `openpi-client` in `dreambc`. Do not install the
+full OpenPI model stack into the Isaac Sim environment.
+
+### 8) Test camera alignment
+
+Before executing pi0.5 actions, verify the images written under
+`camera_samples/`. The pi0.5 DROID policy expects:
+
+- `observation/exterior_image_1_left`: a third-person view of robot, table, and object.
+- `observation/wrist_image_left`: a wrist-mounted camera view fixed to the wrist/gripper frame.
+- `observation/joint_position`: 7 Panda/Franka joint positions.
+- `observation/gripper_position`: 1 normalized gripper position.
+
+Run a one-step camera check:
+
+```bash
+python isaacsim_minimal_rollout.py sim.headless=true sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=rollouts/camera_alignment_check
+```
+
+Inspect the latest PNGs:
+
+```text
+rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_exterior_image_1_left.png
+rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_wrist_image_left.png
+rollouts/camera_alignment_check/<latest>/camera_debug.json
+```
+
+For wrist camera debugging, run the UI with stage-tree, prim-pose, camera-pose,
+and marker output enabled:
+
+```bash
+python isaacsim_minimal_rollout.py sim.headless=false sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=rollouts/wrist_debug_ui debug.print_stage_tree=true debug.print_camera_poses=true debug.print_prim_positions=true debug.add_camera_markers=true sim.keep_open_after_rollout=true
+```
+
+This prints the actual USD hierarchy and world poses for key prims such as
+`link7`, `robotiq_85_base_link`, and the finger links. It also adds green
+markers at camera positions in the scene. If the wrist camera image is blank or
+only shows sky/table, use `camera_debug.json` to compare the wrist camera pose,
+view axes, lens settings, gripper prim positions, table position, and test cube
+position before running pi0.5.
+
+### 9) Run pi0.5 through Isaac Sim
+
+First run a dry-run that queries pi0.5 but does not execute the returned action.
+This verifies websocket IO, image serialization, and action chunk shape:
+
+```bash
+python isaacsim_minimal_rollout.py sim.headless=true sim.steps=20 sim.require_cameras=true policy.kind=pi05_droid_remote policy.pi05_droid_remote.execute=false 'policy.pi05_droid_remote.prompt=pick up the red cube'
+```
+
+Expected output:
+
+```text
+Using policy kind: pi05_droid_remote
+Received pi05_droid action chunk shape: (15, 8)
+Saved rollout: ...
+```
+
+If dry-run works and both policy camera inputs are valid, execute pi0.5 actions
+with conservative velocity limits:
+
+```bash
+python isaacsim_minimal_rollout.py sim.headless=false sim.steps=120 sim.require_cameras=true policy.kind=pi05_droid_remote policy.pi05_droid_remote.execute=true policy.pi05_droid_remote.max_joint_velocity=0.1 'policy.pi05_droid_remote.prompt=pick up the red cube'
+```
+
+The `pi05_droid_remote` adapter follows the OpenPI DROID runtime convention:
+
+- The server returns action chunks shaped like `(horizon, 8)`.
+- The first 7 dimensions are Panda/Franka joint velocity commands.
+- The 8th dimension is a gripper position command.
+- Actions are clipped to `[-1, 1]`.
+- The gripper command is binarized by default.
+- Isaac Sim executes arm commands with `joint_velocities` and gripper commands
+  with joint position targets.
+
+Do not run long `execute=true` rollouts until the wrist camera extrinsic is
+reasonable. If the robot twists without moving toward the target, first check
+the saved camera samples and `metadata.json`; most failures so far have been
+caused by invalid wrist-camera views or mismatched initial robot/camera setup.
 
 ### Isaac Sim troubleshooting notes
 

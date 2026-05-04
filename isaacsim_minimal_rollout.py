@@ -33,8 +33,16 @@ from dreambc_isaac.cameras import (
     make_cameras,
     wait_for_camera_readiness,
 )
+from dreambc_isaac.debug import (
+    add_camera_debug_markers,
+    collect_camera_debug,
+    collect_prim_world_positions,
+    print_camera_world_poses,
+    print_prim_world_positions,
+    print_stage_tree,
+)
 from dreambc_isaac.io import resolve_project_path, save_png
-from dreambc_isaac.policy import fake_policy_action
+from dreambc_isaac.policy import fake_policy_action, make_policy
 from dreambc_isaac.robot import (
     filter_existing_joint_names,
     get_named_joint_positions,
@@ -98,6 +106,29 @@ def main(cfg: DictConfig) -> None:
     print(f"Controlling arm joints only: {arm_joint_names}")
     print(f"Controlling gripper joints: {gripper_joint_names}")
 
+    if locked_base_joint_names:
+        base_position_cfg = cfg.robot.initial_locked_base_joint_positions
+        configured_base_targets = np.asarray(
+            [float(base_position_cfg.get(joint_name, 0.0)) for joint_name in locked_base_joint_names],
+            dtype=np.float32,
+        )
+        robot.set_joint_positions(np.expand_dims(configured_base_targets, axis=0), joint_names=locked_base_joint_names)
+        robot.set_joint_velocities(
+            np.zeros((1, len(locked_base_joint_names)), dtype=np.float32),
+            joint_names=locked_base_joint_names,
+        )
+        print(f"Initialized locked base joints to: {dict(zip(locked_base_joint_names, configured_base_targets.tolist()))}")
+
+    if arm_joint_names:
+        configured_arm_home = np.asarray(cfg.robot.initial_arm_joint_positions, dtype=np.float32)[: len(arm_joint_names)]
+        robot.set_joint_positions(np.expand_dims(configured_arm_home, axis=0), joint_names=arm_joint_names)
+        print(f"Initialized arm joints to tabletop home: {configured_arm_home.tolist()}")
+    if gripper_joint_names:
+        gripper_home = float(cfg.robot.initial_gripper_position[gripper])
+        configured_gripper_home = np.full((len(gripper_joint_names),), gripper_home, dtype=np.float32)
+        robot.set_joint_positions(np.expand_dims(configured_gripper_home, axis=0), joint_names=gripper_joint_names)
+        print(f"Initialized gripper joints to: {configured_gripper_home.tolist()}")
+
     locked_base_targets = get_named_joint_positions(robot, locked_base_joint_names)
     lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
 
@@ -105,12 +136,26 @@ def main(cfg: DictConfig) -> None:
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         world.step(render=True)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
-    initialize_cameras(cameras)
+    initialize_cameras(cameras, cfg.cameras)
 
     for _ in range(int(cfg.sim.warmup_steps)):
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         world.step(render=True)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
+
+    if bool(cfg.debug.print_stage_tree):
+        print_stage_tree(
+            world.stage,
+            str(cfg.debug.stage_tree_root),
+            int(cfg.debug.stage_tree_max_depth),
+        )
+    if bool(cfg.debug.print_prim_positions):
+        print_prim_world_positions(world.stage, list(cfg.debug.prim_position_paths))
+    if bool(cfg.debug.print_camera_poses):
+        print_camera_world_poses(cameras, stage=world.stage, camera_cfg=cfg.cameras)
+    if bool(cfg.debug.add_camera_markers):
+        add_camera_debug_markers(world, cameras, cfg.cameras)
+        world.step(render=True)
 
     try:
         wait_for_camera_readiness(world, robot, cameras, locked_base_joint_names, locked_base_targets)
@@ -125,10 +170,17 @@ def main(cfg: DictConfig) -> None:
         )
         cameras = {}
 
+    policy_kind = str(cfg.policy.kind)
+    policy = make_policy(cfg.policy)
+    print(f"Using policy kind: {policy_kind}")
+    if policy_kind == "pi05_droid_remote" and not bool(cfg.policy.pi05_droid_remote.execute):
+        print("pi05_droid_remote execute=false; querying policy but holding current robot targets.")
+
     rollout = {
         "joint_position": [],
         "gripper_position": [],
         "action": [],
+        "arm_command": [],
         "sample_steps": [],
     }
 
@@ -137,22 +189,48 @@ def main(cfg: DictConfig) -> None:
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         obs = build_observation(robot, cameras, arm_joint_names, gripper_joint_names)
         current_arm_qpos = get_named_joint_positions(robot, arm_joint_names)
-        arm_action, gripper_action = fake_policy_action(
-            step,
-            current_arm_qpos,
-            len(gripper_joint_names),
-            cfg.fake_policy,
-        )
+        current_gripper_qpos = get_named_joint_positions(robot, gripper_joint_names)
+        if policy_kind == "fake":
+            arm_action, gripper_action = fake_policy_action(
+                step,
+                current_arm_qpos,
+                len(gripper_joint_names),
+                cfg.fake_policy,
+            )
+        elif policy_kind == "pi05_droid_remote":
+            arm_action, gripper_action = policy.action(
+                obs,
+                current_arm_qpos,
+                current_gripper_qpos,
+                len(gripper_joint_names),
+            )
+        else:
+            raise ValueError(f"Unsupported policy.kind: {policy_kind}")
         action = np.concatenate([arm_action, gripper_action]).astype(np.float32)
         action = np.concatenate([locked_base_targets, action]).astype(np.float32)
         action_joint_names = locked_base_joint_names + arm_joint_names + gripper_joint_names
 
-        robot.apply_action(
-            ArticulationActions(
-                joint_positions=np.expand_dims(action, axis=0),
-                joint_names=action_joint_names,
+        if policy_kind == "pi05_droid_remote" and policy.last_arm_command_kind == "velocity":
+            robot.apply_action(
+                ArticulationActions(
+                    joint_velocities=np.expand_dims(arm_action, axis=0),
+                    joint_names=arm_joint_names,
+                )
             )
-        )
+            if gripper_joint_names:
+                robot.apply_action(
+                    ArticulationActions(
+                        joint_positions=np.expand_dims(gripper_action, axis=0),
+                        joint_names=gripper_joint_names,
+                    )
+                )
+        else:
+            robot.apply_action(
+                ArticulationActions(
+                    joint_positions=np.expand_dims(action, axis=0),
+                    joint_names=action_joint_names,
+                )
+            )
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         world.step(render=True)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
@@ -160,6 +238,7 @@ def main(cfg: DictConfig) -> None:
         rollout["joint_position"].append(obs["joint_position"])
         rollout["gripper_position"].append(obs["gripper_position"])
         rollout["action"].append(action)
+        rollout["arm_command"].append(arm_action)
 
         if step % int(cfg.sim.save_every) == 0 or step == int(cfg.sim.steps) - 1:
             rollout["sample_steps"].append(step)
@@ -179,8 +258,18 @@ def main(cfg: DictConfig) -> None:
         joint_position=np.asarray(rollout["joint_position"], dtype=np.float32),
         gripper_position=np.asarray(rollout["gripper_position"], dtype=np.float32),
         action=np.asarray(rollout["action"], dtype=np.float32),
+        arm_command=np.asarray(rollout["arm_command"], dtype=np.float32),
         sample_steps=np.asarray(rollout["sample_steps"], dtype=np.int32),
     )
+
+    camera_debug = collect_camera_debug(cameras, stage=world.stage, camera_cfg=cfg.cameras) if cameras else {}
+    prim_debug = collect_prim_world_positions(world.stage, list(cfg.debug.prim_position_paths))
+    debug_summary = {
+        "camera_world_poses": camera_debug,
+        "prim_world_positions": prim_debug,
+    }
+    camera_debug_path = output_dir / "camera_debug.json"
+    camera_debug_path.write_text(json.dumps(debug_summary, indent=2), encoding="utf-8")
 
     metadata = {
         "script": Path(__file__).name,
@@ -197,16 +286,29 @@ def main(cfg: DictConfig) -> None:
         "arm_joint_names": arm_joint_names,
         "gripper_joint_names": gripper_joint_names,
         "observation_keys": camera_observation_keys(cameras) + ["joint_position", "gripper_position"],
-        "action_format": (
-            "named joint target; locked_base_joint_names held at initial targets, "
-            "followed by arm_joint_names and gripper_joint_names"
+        "policy_kind": policy_kind,
+        "pi05_last_raw_action_shape": (
+            list(policy.last_raw_action_shape)
+            if policy_kind == "pi05_droid_remote" and policy.last_raw_action_shape is not None
+            else None
         ),
+        "pi05_arm_command_kind": (
+            policy.last_arm_command_kind if policy_kind == "pi05_droid_remote" else "position"
+        ),
+        "action_format": (
+            "For fake/position policies: named joint target with locked_base_joint_names followed by "
+            "arm_joint_names and gripper_joint_names. For pi05 velocity mode: action stores locked base "
+            "targets followed by arm joint velocity command and gripper joint position target."
+        ),
+        "camera_debug_path": str(camera_debug_path),
+        "camera_debug": debug_summary,
         "png_samples_written": wrote_png,
     }
     (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     print(f"Saved rollout: {rollout_npz}")
     print(f"Saved camera samples: {samples_dir}")
+    print(f"Saved camera debug: {camera_debug_path}")
     if not wrote_png:
         print("PIL was not available; camera samples were saved as compressed npz files only.")
 
