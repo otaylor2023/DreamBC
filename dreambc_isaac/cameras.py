@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from dreambc_isaac.embodiment import resolve_camera_auto_align
 from dreambc_isaac.patches import apply_camera_pipeline_patches
 from dreambc_isaac.robot import get_named_joint_positions, lock_named_joints
 
@@ -115,6 +116,45 @@ def make_cameras(camera_cfg):
                 annotator_device="cpu",
             )
     return cameras
+
+
+def _set_camera_local_pose(camera, translation: np.ndarray, orientation: np.ndarray) -> None:
+    if not hasattr(camera, "set_local_pose"):
+        raise AttributeError(
+            f"Camera '{camera.name}' does not expose set_local_pose(); cannot apply runtime auto alignment."
+        )
+    try:
+        camera.set_local_pose(
+            translation=np.asarray(translation, dtype=np.float64),
+            orientation=np.asarray(orientation, dtype=np.float64),
+        )
+    except TypeError:
+        camera.set_local_pose(np.asarray(translation, dtype=np.float64), np.asarray(orientation, dtype=np.float64))
+
+
+def apply_camera_auto_alignments(stage, cameras: dict[str, object], camera_cfg, grasp_cfg) -> dict[str, dict[str, object]]:
+    alignment_summary: dict[str, dict[str, object]] = {}
+    for name, camera in cameras.items():
+        if name not in camera_cfg:
+            continue
+        result = resolve_camera_auto_align(stage, str(name), camera_cfg[name], grasp_cfg)
+        if result is None:
+            continue
+        resolved_translation = result.resolved_translation_local.astype(np.float64)
+        resolved_look_at = result.resolved_look_at_local.astype(np.float64)
+        resolved_orientation = camera_orientation_look_at(resolved_translation, resolved_look_at)
+        _set_camera_local_pose(camera, resolved_translation, resolved_orientation)
+        cfg_entry = camera_cfg[name]
+        resolved_translation_list = [float(v) for v in resolved_translation.tolist()]
+        resolved_look_at_list = [float(v) for v in resolved_look_at.tolist()]
+        if hasattr(cfg_entry, "translation"):
+            cfg_entry.translation = resolved_translation_list
+            cfg_entry.look_at = resolved_look_at_list
+        else:
+            cfg_entry["translation"] = resolved_translation_list
+            cfg_entry["look_at"] = resolved_look_at_list
+        alignment_summary[str(name)] = result.to_dict()
+    return alignment_summary
 
 
 def _cfg_contains(cfg, key: str) -> bool:

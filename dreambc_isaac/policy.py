@@ -83,9 +83,18 @@ class Pi05DroidRemotePolicy:
         self.binarize_gripper = bool(policy_cfg.binarize_gripper)
         self.gripper_open_target = float(policy_cfg.gripper_open_target)
         self.gripper_closed_target = float(policy_cfg.gripper_closed_target)
+        self.gripper_observation_open_position = float(
+            getattr(policy_cfg, "gripper_observation_open_position", self.gripper_open_target)
+        )
+        self.gripper_observation_closed_position = float(
+            getattr(policy_cfg, "gripper_observation_closed_position", self.gripper_closed_target)
+        )
         self._action_chunk = np.zeros((0, 8), dtype=np.float32)
         self._action_index = 0
         self.last_raw_action_shape: tuple[int, ...] | None = None
+        self.last_selected_raw_action = np.zeros((8,), dtype=np.float32)
+        self.last_selected_clipped_action = np.zeros((8,), dtype=np.float32)
+        self.last_policy_gripper_position = np.zeros((1,), dtype=np.float32)
         self.last_arm_command_kind = "position"
 
     def _image_for_policy(self, image: np.ndarray) -> np.ndarray:
@@ -101,9 +110,10 @@ class Pi05DroidRemotePolicy:
 
         gripper_position = normalize_gripper_position(
             current_gripper_qpos,
-            self.gripper_open_target,
-            self.gripper_closed_target,
+            self.gripper_observation_open_position,
+            self.gripper_observation_closed_position,
         )
+        self.last_policy_gripper_position = gripper_position.copy()
         return {
             "observation/exterior_image_1_left": self._image_for_policy(obs[self.exterior_image_key]),
             "observation/wrist_image_left": self._image_for_policy(obs[self.wrist_image_key]),
@@ -140,13 +150,16 @@ class Pi05DroidRemotePolicy:
         self._ensure_action_chunk(obs, current_gripper_qpos)
         raw_action = self._action_chunk[self._action_index]
         self._action_index += 1
+        self.last_selected_raw_action = np.asarray(raw_action, dtype=np.float32).copy()
 
         current_arm_qpos = np.asarray(current_arm_qpos, dtype=np.float32)
         if not self.execute:
+            self.last_selected_clipped_action = self.last_selected_raw_action.copy()
             self.last_arm_command_kind = "position"
             return current_arm_qpos.copy(), np.asarray(current_gripper_qpos, dtype=np.float32).copy()
 
         raw_action = np.clip(raw_action, -1.0, 1.0)
+        self.last_selected_clipped_action = np.asarray(raw_action, dtype=np.float32).copy()
         if self.action_mode == "joint_velocity":
             joint_velocity = np.clip(
                 raw_action[: current_arm_qpos.shape[0]],

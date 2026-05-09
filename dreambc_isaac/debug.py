@@ -114,6 +114,91 @@ def collect_prim_world_positions(stage, prim_paths: list[str]) -> dict[str, dict
     return positions
 
 
+def collect_grasp_debug(stage, grasp_cfg) -> dict[str, object]:
+    cfg = _camera_cfg_to_dict(grasp_cfg)
+    paths = {
+        "cube": str(cfg.get("cube_prim_path", "")),
+        "gripper_base": str(cfg.get("gripper_base_prim_path", "")),
+        "left_outer_finger": str(cfg.get("left_outer_finger_prim_path", "")),
+        "right_outer_finger": str(cfg.get("right_outer_finger_prim_path", "")),
+        "left_inner_finger": str(cfg.get("left_inner_finger_prim_path", "")),
+        "right_inner_finger": str(cfg.get("right_inner_finger_prim_path", "")),
+        "wrist_camera": str(cfg.get("wrist_camera_prim_path", "")),
+    }
+    positions = {
+        name: (prim_world_position(stage, path) if path else None)
+        for name, path in paths.items()
+    }
+
+    def _delta_and_distance(a_name: str, b_name: str, prefix: str, out: dict[str, object]) -> None:
+        a = positions.get(a_name)
+        b = positions.get(b_name)
+        if a is None or b is None:
+            out[f"{prefix}_delta"] = None
+            out[f"{prefix}_distance"] = None
+            return
+        delta = np.asarray(a, dtype=np.float64) - np.asarray(b, dtype=np.float64)
+        out[f"{prefix}_delta"] = delta.tolist()
+        out[f"{prefix}_distance"] = float(np.linalg.norm(delta))
+
+    result: dict[str, object] = {
+        "paths": paths,
+        "positions": {
+            name: None if position is None else np.asarray(position, dtype=np.float64).tolist()
+            for name, position in positions.items()
+        },
+    }
+
+    left_inner = positions.get("left_inner_finger")
+    right_inner = positions.get("right_inner_finger")
+    if left_inner is not None and right_inner is not None:
+        inner_center = 0.5 * (np.asarray(left_inner, dtype=np.float64) + np.asarray(right_inner, dtype=np.float64))
+        result["inner_finger_center_position"] = inner_center.tolist()
+        result["inner_finger_jaw_gap"] = float(
+            np.linalg.norm(np.asarray(left_inner, dtype=np.float64) - np.asarray(right_inner, dtype=np.float64))
+        )
+    else:
+        result["inner_finger_center_position"] = None
+        result["inner_finger_jaw_gap"] = None
+
+    left_outer = positions.get("left_outer_finger")
+    right_outer = positions.get("right_outer_finger")
+    if left_outer is not None and right_outer is not None:
+        outer_center = 0.5 * (np.asarray(left_outer, dtype=np.float64) + np.asarray(right_outer, dtype=np.float64))
+        result["outer_finger_center_position"] = outer_center.tolist()
+        result["outer_finger_jaw_gap"] = float(
+            np.linalg.norm(np.asarray(left_outer, dtype=np.float64) - np.asarray(right_outer, dtype=np.float64))
+        )
+    else:
+        result["outer_finger_center_position"] = None
+        result["outer_finger_jaw_gap"] = None
+
+    cube = positions.get("cube")
+    if cube is not None and result["inner_finger_center_position"] is not None:
+        delta = np.asarray(result["inner_finger_center_position"], dtype=np.float64) - np.asarray(cube, dtype=np.float64)
+        result["inner_finger_center_to_cube_delta"] = delta.tolist()
+        result["inner_finger_center_to_cube_distance"] = float(np.linalg.norm(delta))
+    else:
+        result["inner_finger_center_to_cube_delta"] = None
+        result["inner_finger_center_to_cube_distance"] = None
+
+    if cube is not None and result["outer_finger_center_position"] is not None:
+        delta = np.asarray(result["outer_finger_center_position"], dtype=np.float64) - np.asarray(cube, dtype=np.float64)
+        result["outer_finger_center_to_cube_delta"] = delta.tolist()
+        result["outer_finger_center_to_cube_distance"] = float(np.linalg.norm(delta))
+    else:
+        result["outer_finger_center_to_cube_delta"] = None
+        result["outer_finger_center_to_cube_distance"] = None
+
+    _delta_and_distance("gripper_base", "cube", "gripper_base_to_cube", result)
+    _delta_and_distance("wrist_camera", "cube", "wrist_camera_to_cube", result)
+    _delta_and_distance("left_inner_finger", "cube", "left_inner_finger_to_cube", result)
+    _delta_and_distance("right_inner_finger", "cube", "right_inner_finger_to_cube", result)
+    _delta_and_distance("left_outer_finger", "cube", "left_outer_finger_to_cube", result)
+    _delta_and_distance("right_outer_finger", "cube", "right_outer_finger_to_cube", result)
+    return result
+
+
 def collect_camera_debug(
     cameras: dict[str, object],
     *,
