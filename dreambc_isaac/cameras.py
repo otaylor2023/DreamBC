@@ -72,24 +72,87 @@ def camera_orientation_look_at_usd_neg_z(
     return rot_utils.rot_matrices_to_quats(rotation_matrix)
 
 
+def camera_orientation_usd_neg_z_forward_up(
+    forward: np.ndarray,
+    up: np.ndarray,
+) -> np.ndarray:
+    """USD camera in parent frame: local -Z views along `forward`; local +Y is image up (~`up`)."""
+    import isaacsim.core.utils.numpy.rotations as rot_utils
+
+    f = np.asarray(forward, dtype=np.float64)
+    f = f / (np.linalg.norm(f) + 1e-12)
+    u = np.asarray(up, dtype=np.float64)
+    u = u / (np.linalg.norm(u) + 1e-12)
+    z_cam = -f
+    y_cam = u - z_cam * np.dot(u, z_cam)
+    ny = np.linalg.norm(y_cam)
+    if ny < 1e-6:
+        y_cam = np.asarray([0.0, 1.0, 0.0], dtype=np.float64)
+        y_cam = y_cam - z_cam * np.dot(y_cam, z_cam)
+        ny = np.linalg.norm(y_cam)
+    y_cam = y_cam / ny
+    x_cam = np.cross(y_cam, z_cam)
+    x_cam = x_cam / (np.linalg.norm(x_cam) + 1e-12)
+    y_cam = np.cross(z_cam, x_cam)
+    y_cam = y_cam / (np.linalg.norm(y_cam) + 1e-12)
+    rotation_matrix = np.column_stack([x_cam, y_cam, z_cam])
+    return rot_utils.rot_matrices_to_quats(rotation_matrix)
+
+
 def make_cameras(camera_cfg):
-    from isaacsim.core.utils.prims import define_prim
+    from isaacsim.core.utils.prims import define_prim, is_prim_path_valid
     from isaacsim.sensors.camera import Camera
 
-    define_prim("/World/Cameras", "Xform")
+    if not is_prim_path_valid("/World/Cameras"):
+        define_prim("/World/Cameras", "Xform")
     cameras = {}
     for name, cfg in camera_cfg.items():
         if "translation" in cfg:
             translation = np.asarray(cfg.translation, dtype=np.float64)
-            if "look_at" in cfg:
-                # Isaac's Camera wrapper renders along local +X for both world-space
-                # and articulation-parented cameras. Keep the same convention here
-                # so YAML look_at rays match the saved camera images.
-                orientation = camera_orientation_look_at(
-                    translation, np.asarray(cfg.look_at, dtype=np.float64)
+            if _cfg_contains(cfg, "view_forward_xyz") and _cfg_contains(cfg, "view_up_xyz"):
+                orientation = camera_orientation_usd_neg_z_forward_up(
+                    np.asarray(cfg.view_forward_xyz, dtype=np.float64),
+                    np.asarray(cfg.view_up_xyz, dtype=np.float64),
                 )
+                if _cfg_contains(cfg, "orientation_post_euler_xyz_degrees"):
+                    import isaacsim.core.utils.numpy.rotations as rot_utils
+
+                    post = np.asarray(tuple(cfg.orientation_post_euler_xyz_degrees), dtype=np.float64)
+                    q_post = rot_utils.euler_angles_to_quats(post, degrees=True)
+                    r_base = rot_utils.quats_to_rot_matrices(orientation)
+                    r_post = rot_utils.quats_to_rot_matrices(q_post)
+                    orientation = rot_utils.rot_matrices_to_quats(r_base @ r_post)
+            elif "look_at" in cfg:
+                # World-space cameras: optical axis +X (`camera_orientation_look_at`).
+                # Parented wrist / tool cameras: use `look_at_convention: usd_neg_z` so local -Z
+                # looks at the target (matches USD camera / Isaac wrist mounts; avoids inverted image).
+                look_conv = str(_cfg_get(cfg, "look_at_convention", "plus_x"))
+                target = np.asarray(cfg.look_at, dtype=np.float64)
+                up_axis = None
+                if _cfg_contains(cfg, "look_at_up_xyz"):
+                    up_axis = np.asarray(tuple(cfg.look_at_up_xyz), dtype=np.float64)
+                if look_conv == "usd_neg_z":
+                    orientation = camera_orientation_look_at_usd_neg_z(translation, target, up_axis=up_axis)
+                else:
+                    orientation = camera_orientation_look_at(translation, target, up_axis=up_axis)
+                if _cfg_contains(cfg, "orientation_post_euler_xyz_degrees"):
+                    import isaacsim.core.utils.numpy.rotations as rot_utils
+
+                    post = np.asarray(tuple(cfg.orientation_post_euler_xyz_degrees), dtype=np.float64)
+                    q_post = rot_utils.euler_angles_to_quats(post, degrees=True)
+                    r_look = rot_utils.quats_to_rot_matrices(orientation)
+                    r_post = rot_utils.quats_to_rot_matrices(q_post)
+                    orientation = rot_utils.rot_matrices_to_quats(r_look @ r_post)
             else:
                 orientation = camera_orientation_from_euler_xyz(tuple(cfg.orientation_euler_xyz_degrees))
+                if _cfg_contains(cfg, "orientation_post_euler_xyz_degrees"):
+                    import isaacsim.core.utils.numpy.rotations as rot_utils
+
+                    post = np.asarray(tuple(cfg.orientation_post_euler_xyz_degrees), dtype=np.float64)
+                    q_post = rot_utils.euler_angles_to_quats(post, degrees=True)
+                    r_base = rot_utils.quats_to_rot_matrices(orientation)
+                    r_post = rot_utils.quats_to_rot_matrices(q_post)
+                    orientation = rot_utils.rot_matrices_to_quats(r_base @ r_post)
             cameras[name] = Camera(
                 prim_path=cfg.prim_path,
                 name=name,

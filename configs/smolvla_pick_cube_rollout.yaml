@@ -1,0 +1,66 @@
+# SmolVLA zero-shot pick-cube rollout: table + red test cube only (no desk props).
+# Run: python isaacsim_minimal_rollout.py --config-name=smolvla_pick_cube_rollout
+
+defaults:
+  - minimal_rollout
+  - _self_
+
+project_root: .
+
+sim:
+  headless: true
+  steps: 200
+  warmup_steps: 20
+  save_every: 10
+  require_cameras: true
+  keep_open_after_rollout: false
+  save_camera_videos: true
+  video_fps: 20
+
+scene:
+  test_cube:
+    enabled: true
+    prim_path: /World/TestCube
+    name: test_cube
+    position: [0.55, 0.0, 0.1]
+    scale: [0.05, 0.05, 0.05]
+    color: [0.9, 0.12, 0.08]
+  props:
+    enabled: false
+
+policy:
+  kind: smolvla
+
+smolvla:
+  model_path: ${project_root}/models/smolvla_base
+  task: "pick up the cube"
+  device: cuda
+  image_size: 256
+  camera_keys:
+    - exterior_image_1_left
+    - exterior_image_2_left
+    - wrist_image_left
+  state_arm_indices: [0, 1, 2, 3, 4, 5]
+  action_arm_indices: [0, 1, 2, 3, 4, 5]
+  gripper_action_index: 5
+  gripper_min: 0.02
+  gripper_max: 0.04
+
+output:
+  dir: rollouts/smolvla_pick_cube
+
+debug:
+  prim_position_paths:
+    - /World/Panda/Robot/panda_link7
+    - /World/Panda/Robot/panda_hand_tcp
+    - /World/Panda/Robot/panda_leftfinger
+    - /World/Panda/Robot/panda_rightfinger
+    - /World/Panda/Robot/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    - /World/Table
+    - /World/TestCube
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${project_root}/outputs/hydra/${now:%Y%m%d_%H%M%S}

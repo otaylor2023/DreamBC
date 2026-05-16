@@ -95,7 +95,8 @@ def import_urdf(urdf_path: Path, target_path: str) -> str:
     stage = omni.usd.get_context().get_stage()
 
     import_config = urdf.ImportConfig()
-    import_config.merge_fixed_joints = False
+    # True: collapse fixed joints (needed for Franka official URDF self-collision helper links `_sc`).
+    import_config.merge_fixed_joints = True
     import_config.convex_decomp = False
     import_config.fix_base = True
     import_config.make_default_prim = True

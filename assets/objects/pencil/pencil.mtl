@@ -1,0 +1,14 @@
+# Blender 4.3.2 MTL File: 'Dixon-T No. 2 Pencil.blend'
+# www.blender.org
+
+newmtl Baked
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/DT-No2_color.png
+map_Ns textures/DT-No2_roughness.png
+map_refl textures/DT-No2_metallic.png
+map_Bump -bm 1.000000 textures/DT-No2_normal.png

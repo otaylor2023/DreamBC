@@ -10,7 +10,7 @@ Run from an Isaac Sim shell, for example:
   python isaacsim_minimal_rollout.py sim.headless=true sim.steps=120
 
 This script intentionally does not depend on CDC or OpenPI. It creates the
-minimum observation/action loop that a future pi0.5 client can replace:
+minimum observation/action loop:
   Isaac Sim -> images + joints -> fake policy -> joint action -> rollout log.
 """
 
@@ -41,13 +41,14 @@ from dreambc_isaac.debug import (
     print_prim_world_positions,
     print_stage_tree,
 )
-from dreambc_isaac.io import resolve_project_path, save_png
-from dreambc_isaac.policy import fake_policy_action, make_policy
+from dreambc_isaac.io import resolve_project_path, save_png, write_camera_rollout_videos
+from dreambc_isaac.policy import fake_policy_action, load_smolvla_runner_if_configured, smolvla_policy_action
 from dreambc_isaac.robot import (
     filter_existing_joint_names,
     get_named_joint_positions,
     lock_named_joints,
 )
+from dreambc_isaac.robot_mounts import ensure_link7_wrist_camera_mount
 from dreambc_isaac.scene import add_simple_scene
 from dreambc_isaac.urdf import enable_first_available_urdf_extension, import_urdf
 
@@ -76,13 +77,15 @@ def main(cfg: DictConfig) -> None:
     samples_dir.mkdir(parents=True, exist_ok=True)
 
     world = World(stage_units_in_meters=float(cfg.sim.stage_units_in_meters))
-    add_simple_scene(world, cfg.scene)
+    add_simple_scene(world, cfg.scene, project_root)
 
     urdf_path = resolve_project_path(project_root, cfg.robot.urdfs[gripper])
     robot_root_path = import_urdf(urdf_path, str(cfg.robot.target_path))
     articulation_path = f"{robot_root_path}/{cfg.robot.articulation_child}"
     robot = Articulation(prim_paths_expr=articulation_path, name="panda")
     world.scene.add(robot)
+
+    ensure_link7_wrist_camera_mount(world.stage, cfg.scene)
 
     cameras = make_cameras(cfg.cameras)
     require_cameras = bool(getattr(cfg.sim, "require_cameras", True))
@@ -171,10 +174,16 @@ def main(cfg: DictConfig) -> None:
         cameras = {}
 
     policy_kind = str(cfg.policy.kind)
-    policy = make_policy(cfg.policy)
+    if policy_kind not in ("fake", "smolvla"):
+        raise ValueError(f"Unsupported policy.kind: {policy_kind} (supported: fake, smolvla)")
     print(f"Using policy kind: {policy_kind}")
-    if policy_kind == "pi05_droid_remote" and not bool(cfg.policy.pi05_droid_remote.execute):
-        print("pi05_droid_remote execute=false; querying policy but holding current robot targets.")
+
+    smolvla_runner = None
+    if policy_kind == "smolvla":
+        if not cameras:
+            raise RuntimeError("policy.kind=smolvla requires working cameras (set sim.require_cameras=true).")
+        smolvla_runner = load_smolvla_runner_if_configured(cfg)
+        print(f"Loaded SmolVLA from {cfg.smolvla.model_path} task={cfg.smolvla.task!r}")
 
     rollout = {
         "joint_position": [],
@@ -185,11 +194,14 @@ def main(cfg: DictConfig) -> None:
     }
 
     wrote_png = False
+    save_camera_videos = bool(cameras) and bool(getattr(cfg.sim, "save_camera_videos", False))
+    video_frames: dict[str, list[np.ndarray]] = {name: [] for name in cameras} if save_camera_videos else {}
+    video_fps = float(getattr(cfg.sim, "video_fps", 20.0))
+
     for step in range(int(cfg.sim.steps)):
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         obs = build_observation(robot, cameras, arm_joint_names, gripper_joint_names)
         current_arm_qpos = get_named_joint_positions(robot, arm_joint_names)
-        current_gripper_qpos = get_named_joint_positions(robot, gripper_joint_names)
         if policy_kind == "fake":
             arm_action, gripper_action = fake_policy_action(
                 step,
@@ -197,43 +209,31 @@ def main(cfg: DictConfig) -> None:
                 len(gripper_joint_names),
                 cfg.fake_policy,
             )
-        elif policy_kind == "pi05_droid_remote":
-            arm_action, gripper_action = policy.action(
+        else:
+            arm_action, gripper_action = smolvla_policy_action(
+                smolvla_runner,
                 obs,
                 current_arm_qpos,
-                current_gripper_qpos,
                 len(gripper_joint_names),
             )
-        else:
-            raise ValueError(f"Unsupported policy.kind: {policy_kind}")
         action = np.concatenate([arm_action, gripper_action]).astype(np.float32)
         action = np.concatenate([locked_base_targets, action]).astype(np.float32)
         action_joint_names = locked_base_joint_names + arm_joint_names + gripper_joint_names
 
-        if policy_kind == "pi05_droid_remote" and policy.last_arm_command_kind == "velocity":
-            robot.apply_action(
-                ArticulationActions(
-                    joint_velocities=np.expand_dims(arm_action, axis=0),
-                    joint_names=arm_joint_names,
-                )
+        robot.apply_action(
+            ArticulationActions(
+                joint_positions=np.expand_dims(action, axis=0),
+                joint_names=action_joint_names,
             )
-            if gripper_joint_names:
-                robot.apply_action(
-                    ArticulationActions(
-                        joint_positions=np.expand_dims(gripper_action, axis=0),
-                        joint_names=gripper_joint_names,
-                    )
-                )
-        else:
-            robot.apply_action(
-                ArticulationActions(
-                    joint_positions=np.expand_dims(action, axis=0),
-                    joint_names=action_joint_names,
-                )
-            )
+        )
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         world.step(render=True)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
+
+        if save_camera_videos:
+            obs_after_step = build_observation(robot, cameras, arm_joint_names, gripper_joint_names)
+            for name in cameras:
+                video_frames[name].append(np.copy(obs_after_step[name]))
 
         rollout["joint_position"].append(obs["joint_position"])
         rollout["gripper_position"].append(obs["gripper_position"])
@@ -251,6 +251,10 @@ def main(cfg: DictConfig) -> None:
                 for camera_name in cameras:
                     png_path = samples_dir / f"step_{step:04d}_{camera_name}.png"
                     wrote_png = save_png(png_path, obs[camera_name]) or wrote_png
+
+    camera_videos_written: dict[str, str] = {}
+    if save_camera_videos and video_frames:
+        camera_videos_written = write_camera_rollout_videos(output_dir, video_frames, fps=video_fps)
 
     rollout_npz = output_dir / "rollout.npz"
     np.savez_compressed(
@@ -287,28 +291,25 @@ def main(cfg: DictConfig) -> None:
         "gripper_joint_names": gripper_joint_names,
         "observation_keys": camera_observation_keys(cameras) + ["joint_position", "gripper_position"],
         "policy_kind": policy_kind,
-        "pi05_last_raw_action_shape": (
-            list(policy.last_raw_action_shape)
-            if policy_kind == "pi05_droid_remote" and policy.last_raw_action_shape is not None
-            else None
-        ),
-        "pi05_arm_command_kind": (
-            policy.last_arm_command_kind if policy_kind == "pi05_droid_remote" else "position"
-        ),
         "action_format": (
-            "For fake/position policies: named joint target with locked_base_joint_names followed by "
-            "arm_joint_names and gripper_joint_names. For pi05 velocity mode: action stores locked base "
-            "targets followed by arm joint velocity command and gripper joint position target."
+            "Joint position target: locked_base_joint_names, then arm_joint_names, then gripper_joint_names."
         ),
         "camera_debug_path": str(camera_debug_path),
         "camera_debug": debug_summary,
         "png_samples_written": wrote_png,
+        "save_camera_videos": save_camera_videos,
+        "video_fps": video_fps if save_camera_videos else None,
+        "camera_videos": camera_videos_written,
     }
     (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     print(f"Saved rollout: {rollout_npz}")
     print(f"Saved camera samples: {samples_dir}")
     print(f"Saved camera debug: {camera_debug_path}")
+    if camera_videos_written:
+        print(f"Saved camera videos ({len(camera_videos_written)}): {output_dir / 'camera_videos'}")
+    elif save_camera_videos:
+        print("Camera video export was enabled but no MP4 files were written (see warnings above).")
     if not wrote_png:
         print("PIL was not available; camera samples were saved as compressed npz files only.")
 

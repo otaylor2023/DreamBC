@@ -6,3 +6,13 @@ __pycache__/
 rollouts/
 outputs/
 .codex
+# Generated on first Isaac Sim import (source meshes stay in assets/objects/)
+assets/objects/**/*.usd
+.env
+
+# SmolVLA weights — download at runtime (see README / requirements-smolvla.txt)
+models/smolvla_base/model.safetensors
+models/smolvla_base/collage_small.gif
+
+# Unused pencil source export (runtime uses pencil.obj + textures)
+assets/objects/pencil/pencil.fbx

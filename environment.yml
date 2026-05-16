@@ -12,4 +12,6 @@ dependencies:
   - omegaconf
   - attrs
   - pillow
+  - imageio
+  - imageio-ffmpeg
   - libstdcxx-ng

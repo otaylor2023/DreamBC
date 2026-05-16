@@ -5,3 +5,5 @@ hydra-core
 omegaconf
 attrs
 pillow
+imageio>=2.36.1
+imageio-ffmpeg>=0.5.1
