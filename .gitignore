@@ -1,1 +1,6 @@
 Ctrl-World/
+cosmos-transfer2.5/
+.cache/
+videos/output/
+__pycache__/
+*.pyc
