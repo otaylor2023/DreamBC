@@ -14,9 +14,11 @@ sim:
 
 robot:
   gripper: franka
+  # Franka Emika Panda: Isaac asset matches Lula IK / RMPFlow (recommended).
+  source: isaac_franka
+  prim_path: /World/Panda
   target_path: /World/Panda
   articulation_child: Robot
-  # Official Franka Panda + hand (noetic franka_description); no mobile base.
   locked_base_joint_names: []
   initial_locked_base_joint_positions: {}
   arm_joint_names: [panda_joint1, panda_joint2, panda_joint3, panda_joint4, panda_joint5, panda_joint6, panda_joint7]
@@ -70,7 +72,7 @@ scene:
   # as a zero-DOF child link on joint 7, without editing the URDF.
   link7_wrist_camera_mount:
     enabled: true
-    parent_prim: /World/Panda/Robot/panda_link7
+    parent_prim: /World/Panda/panda_link7
     mount_name: wrist_camera_mount
     # Link7 frame: offset along -Y; +45° about link7 +Z on the mount Xform.
     mount_translation: [0.0, -0.06, 0.123]
@@ -112,7 +114,7 @@ cameras:
     horizontal_aperture: 4.1
   wrist_image_left:
     # Locked from wrist_sweep_rot_yz/05_z_+090_x90 (X+90°, Z+90° post); dot on mount +Z front face.
-    prim_path: /World/Panda/Robot/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    prim_path: /World/Panda/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
     translation: [0.0, 0.0, 0.0]
     view_forward_xyz: [1.0, 0.0, 0.0]
     view_up_xyz: [0.0, 0.0, 1.0]
@@ -133,21 +135,21 @@ policy:
   kind: fake
 
 output:
-  dir: rollouts/minimal_rollout
+  dir: outputs/rollouts/minimal_rollout
   timestamp_format: "%Y%m%d_%H%M%S"
 
 debug:
   print_stage_tree: false
-  stage_tree_root: /World/Panda/Robot
+  stage_tree_root: /World/Panda
   stage_tree_max_depth: 3
   print_camera_poses: false
   print_prim_positions: false
   prim_position_paths:
-    - /World/Panda/Robot/panda_link7
-    - /World/Panda/Robot/panda_hand_tcp
-    - /World/Panda/Robot/panda_leftfinger
-    - /World/Panda/Robot/panda_rightfinger
-    - /World/Panda/Robot/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    - /World/Panda/panda_link7
+    - /World/Panda/panda_hand
+    - /World/Panda/panda_leftfinger
+    - /World/Panda/panda_rightfinger
+    - /World/Panda/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
     - /World/Table
     - /World/Props/Pencil
     - /World/Props/PencilSharpener

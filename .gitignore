@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 rollouts/
 outputs/
+data/lerobot/
 .codex
 # Generated on first Isaac Sim import (source meshes stay in assets/objects/)
 assets/objects/**/*.usd

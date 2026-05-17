@@ -1,0 +1,18 @@
+# Eval fine-tuned SmolVLA with required camera MP4 recording.
+# Run: python isaacsim_minimal_rollout.py --config-name=smolvla_pick_cube_eval \
+#   smolvla.model_path=outputs/train/smolvla_pick_cube/checkpoints/last/pretrained_model
+
+defaults:
+  - smolvla_pick_cube_rollout
+  - _self_
+
+output:
+  dir: outputs/rollouts/smolvla_pick_cube_eval
+
+sim:
+  save_camera_videos: true
+  require_cameras: true
+  keep_open_after_rollout: false
+
+smolvla:
+  model_path: ${project_root}/outputs/train/smolvla_pick_cube/checkpoints/last/pretrained_model

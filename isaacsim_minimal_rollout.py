@@ -47,10 +47,12 @@ from dreambc_isaac.robot import (
     filter_existing_joint_names,
     get_named_joint_positions,
     lock_named_joints,
+    set_named_joint_positions,
 )
 from dreambc_isaac.robot_mounts import ensure_link7_wrist_camera_mount
 from dreambc_isaac.scene import add_simple_scene
-from dreambc_isaac.urdf import enable_first_available_urdf_extension, import_urdf
+from dreambc_isaac.franka_spawn import spawn_franka
+from dreambc_isaac.urdf import enable_first_available_urdf_extension
 
 
 @hydra.main(config_path="configs", config_name="minimal_rollout", version_base="1.3")
@@ -58,9 +60,8 @@ def main(cfg: DictConfig) -> None:
     sim_app = SimulationApp(simulation_app_config(bool(cfg.sim.headless)))
 
     from isaacsim.core.api import World
-    from isaacsim.core.prims import Articulation
+    from isaacsim.core.prims import SingleArticulation
     from isaacsim.core.utils.extensions import enable_extension
-    from isaacsim.core.utils.types import ArticulationActions
 
     enabled_extension = enable_first_available_urdf_extension(enable_extension)
     print(f"Enabled URDF importer extension: {enabled_extension}")
@@ -79,10 +80,8 @@ def main(cfg: DictConfig) -> None:
     world = World(stage_units_in_meters=float(cfg.sim.stage_units_in_meters))
     add_simple_scene(world, cfg.scene, project_root)
 
-    urdf_path = resolve_project_path(project_root, cfg.robot.urdfs[gripper])
-    robot_root_path = import_urdf(urdf_path, str(cfg.robot.target_path))
-    articulation_path = f"{robot_root_path}/{cfg.robot.articulation_child}"
-    robot = Articulation(prim_paths_expr=articulation_path, name="panda")
+    articulation_path = spawn_franka(world, cfg, project_root, enable_extension)
+    robot = SingleArticulation(prim_path=articulation_path, name="panda")
     world.scene.add(robot)
 
     ensure_link7_wrist_camera_mount(world.stage, cfg.scene)
@@ -93,6 +92,7 @@ def main(cfg: DictConfig) -> None:
     camera_failure_reason = ""
 
     world.reset()
+    robot.initialize()
     locked_base_joint_names = filter_existing_joint_names(robot, list(cfg.robot.locked_base_joint_names))
     arm_joint_names = filter_existing_joint_names(robot, list(cfg.robot.arm_joint_names))
     gripper_joint_names = filter_existing_joint_names(robot, list(cfg.robot.gripper_joint_names[gripper]))
@@ -115,21 +115,17 @@ def main(cfg: DictConfig) -> None:
             [float(base_position_cfg.get(joint_name, 0.0)) for joint_name in locked_base_joint_names],
             dtype=np.float32,
         )
-        robot.set_joint_positions(np.expand_dims(configured_base_targets, axis=0), joint_names=locked_base_joint_names)
-        robot.set_joint_velocities(
-            np.zeros((1, len(locked_base_joint_names)), dtype=np.float32),
-            joint_names=locked_base_joint_names,
-        )
+        set_named_joint_positions(robot, locked_base_joint_names, configured_base_targets)
         print(f"Initialized locked base joints to: {dict(zip(locked_base_joint_names, configured_base_targets.tolist()))}")
 
     if arm_joint_names:
         configured_arm_home = np.asarray(cfg.robot.initial_arm_joint_positions, dtype=np.float32)[: len(arm_joint_names)]
-        robot.set_joint_positions(np.expand_dims(configured_arm_home, axis=0), joint_names=arm_joint_names)
+        set_named_joint_positions(robot, arm_joint_names, configured_arm_home)
         print(f"Initialized arm joints to tabletop home: {configured_arm_home.tolist()}")
     if gripper_joint_names:
         gripper_home = float(cfg.robot.initial_gripper_position[gripper])
         configured_gripper_home = np.full((len(gripper_joint_names),), gripper_home, dtype=np.float32)
-        robot.set_joint_positions(np.expand_dims(configured_gripper_home, axis=0), joint_names=gripper_joint_names)
+        set_named_joint_positions(robot, gripper_joint_names, configured_gripper_home)
         print(f"Initialized gripper joints to: {configured_gripper_home.tolist()}")
 
     locked_base_targets = get_named_joint_positions(robot, locked_base_joint_names)
@@ -217,15 +213,10 @@ def main(cfg: DictConfig) -> None:
                 len(gripper_joint_names),
             )
         action = np.concatenate([arm_action, gripper_action]).astype(np.float32)
-        action = np.concatenate([locked_base_targets, action]).astype(np.float32)
+        full_action = np.concatenate([locked_base_targets, action]).astype(np.float32)
         action_joint_names = locked_base_joint_names + arm_joint_names + gripper_joint_names
 
-        robot.apply_action(
-            ArticulationActions(
-                joint_positions=np.expand_dims(action, axis=0),
-                joint_names=action_joint_names,
-            )
-        )
+        set_named_joint_positions(robot, action_joint_names, full_action)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)
         world.step(render=True)
         lock_named_joints(robot, locked_base_joint_names, locked_base_targets)

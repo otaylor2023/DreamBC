@@ -36,7 +36,8 @@ from dreambc_isaac.robot import (
 )
 from dreambc_isaac.robot_mounts import ensure_link7_wrist_camera_mount
 from dreambc_isaac.scene import add_simple_scene
-from dreambc_isaac.urdf import enable_first_available_urdf_extension, import_urdf
+from dreambc_isaac.franka_spawn import spawn_franka
+from dreambc_isaac.urdf import enable_first_available_urdf_extension
 
 WRIST_VARIANTS: list[tuple[str, dict]] = [
     ("01_fwd_up_z", {"view_forward_xyz": [1.0, 0.0, 0.0], "view_up_xyz": [0.0, 0.0, 1.0]}),
@@ -157,9 +158,7 @@ def _capture_variant(cfg: DictConfig, out_dir: Path) -> None:
     world = World(stage_units_in_meters=float(cfg.sim.stage_units_in_meters))
     add_simple_scene(world, cfg.scene, project_root)
 
-    urdf_path = resolve_project_path(project_root, cfg.robot.urdfs[gripper])
-    robot_root_path = import_urdf(urdf_path, str(cfg.robot.target_path))
-    articulation_path = f"{robot_root_path}/{cfg.robot.articulation_child}"
+    articulation_path = spawn_franka(world, cfg, project_root, enable_extension)
     robot = Articulation(prim_paths_expr=articulation_path, name="panda")
     world.scene.add(robot)
     ensure_link7_wrist_camera_mount(world.stage, cfg.scene)

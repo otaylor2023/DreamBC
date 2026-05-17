@@ -47,15 +47,15 @@ smolvla:
   gripper_max: 0.04
 
 output:
-  dir: rollouts/smolvla_pick_cube
+  dir: outputs/rollouts/smolvla_pick_cube
 
 debug:
   prim_position_paths:
-    - /World/Panda/Robot/panda_link7
-    - /World/Panda/Robot/panda_hand_tcp
-    - /World/Panda/Robot/panda_leftfinger
-    - /World/Panda/Robot/panda_rightfinger
-    - /World/Panda/Robot/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    - /World/Panda/panda_link7
+    - /World/Panda/panda_hand
+    - /World/Panda/panda_leftfinger
+    - /World/Panda/panda_rightfinger
+    - /World/Panda/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
     - /World/Table
     - /World/TestCube
 

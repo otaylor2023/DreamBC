@@ -1,0 +1,68 @@
+# Lula IK pick demos -> LeRobot dataset for SmolVLA fine-tuning (curobo.enabled=false by default).
+# Run: python isaacsim_curobo_collect_dataset.py --config-name=curobo_pick_cube_dataset
+
+defaults:
+  - smolvla_pick_cube_rollout
+  - _self_
+
+project_root: .
+
+sim:
+  headless: true
+  warmup_steps: 25
+  steps_per_waypoint: 1
+  require_cameras: true
+  save_camera_videos: false
+  video_fps: 20
+  keep_open_after_rollout: false
+
+policy:
+  kind: fake
+
+dataset:
+  repo_id: local/dreambc_franka_pick_cube
+  root: ${project_root}/data/lerobot/dreambc_franka_pick_cube
+  task: "pick up the cube"
+  num_episodes: 100
+  robot_type: franka_panda_sim
+  fps: 20
+  vcodec: h264
+  cube_pose_randomization:
+    xy_m: 0.04
+    yaw_deg: 25.0
+  save_preview_mp4: true
+  preview_mp4_all_episodes: false
+  preview_mp4_save_discarded: false
+  preview_mp4_every_n_episodes: 5
+  preview_mp4_max_count: 20
+  min_cube_lift_m: 0.03
+  preview_cameras:
+    - exterior_image_1_left
+    - exterior_image_2_left
+    - wrist_image_left
+    - scene_overview
+
+curobo:
+  # planner_backend: rmpflow (Isaac PickPlace+RMPFlow) | lula | curobo (curobo needs enabled: true)
+  planner_backend: rmpflow
+  enabled: false
+  allow_lula_fallback: true
+  control_hz: 20
+  approach_height_m: 0.28
+  grasp_approach_offset: 0.12
+  grasp_lift_offset: 0.12
+  rmpflow_stop_after_event: 5
+  rmpflow_events_dt: [0.015, 0.015, 0.06, 0.08, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06]
+  grasp_approach_in_tool_frame: true
+  grasp_lift_in_tool_frame: true
+  gripper_open: 0.04
+  gripper_closed: 0.0
+  gripper_close_hold_steps: 12
+  waypoint_settle_steps: 4
+  cube_half_extents: [0.025, 0.025, 0.025]
+  max_pick_controller_steps: 2500
+  demo_teleport_joints: false
+  physics_settle_steps_per_waypoint: 4
+
+output:
+  dir: outputs/demos/logs

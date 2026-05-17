@@ -136,7 +136,7 @@ def ensure_link7_wrist_camera_mount(stage, scene_cfg: Any) -> None:
     if not enabled:
         return
 
-    parent_path = str(mount.get("parent_prim", "/World/Panda/Robot/panda_link7")).rstrip("/")
+    parent_path = str(mount.get("parent_prim", "/World/Panda/panda_link7")).rstrip("/")
     mount_name = str(mount.get("mount_name", "wrist_camera_mount"))
     mount_path = f"{parent_path}/{mount_name}"
 

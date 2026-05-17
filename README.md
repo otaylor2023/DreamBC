@@ -141,13 +141,58 @@ source scripts/isaacsim_shell.sh
 python isaacsim_minimal_rollout.py --config-name=smolvla_pick_cube_rollout
 ```
 
-Outputs under `rollouts/smolvla_pick_cube/<timestamp>/` including `camera_videos/*.mp4` for all four cameras. The base `smolvla_base` checkpoint is not Franka-trained; expect weak zero-shot grasping until finetuned.
+Outputs under `outputs/rollouts/smolvla_pick_cube/<timestamp>/` including `camera_videos/*.mp4` for all four cameras. The base `smolvla_base` checkpoint is not Franka-trained; expect weak zero-shot grasping until finetuned.
+
+### Output layout
+
+| Path | Purpose |
+|------|---------|
+| `outputs/demos/logs/` | Dataset collection summaries |
+| `outputs/demos/test_logs/` | Short test-collect logs |
+| `outputs/rollouts/<name>/` | Policy / debug rollout MP4s and metadata |
+| `outputs/train/smolvla_pick_cube/` | Fine-tuned checkpoints |
+| `data/lerobot/dreambc_franka_pick_cube/` | LeRobot dataset (+ `preview_mp4/` debug videos) |
+
+### Train pick-cube (RMPFlow demos → SmolVLA fine-tune)
+
+Collect demonstrations in Isaac Sim with the **Franka Emika Panda** from Isaac’s robot asset
+(`robot.source: isaac_franka`, same model Lula IK / RMPFlow use). **RMPFlow + PickPlace** is the default planner.
+CuRobo in-process is disabled (`curobo.enabled: false`) because it conflicts with Isaac’s bundled Warp.
+
+```bash
+source scripts/isaacsim_shell.sh
+python isaacsim_curobo_collect_dataset.py --config-name=curobo_pick_cube_dataset
+# test run with MP4 for every episode (incl. failures): --config-name=curobo_pick_cube_test
+```
+
+Dataset: `data/lerobot/dreambc_franka_pick_cube/`. Preview MP4s (subset): `data/lerobot/dreambc_franka_pick_cube/preview_mp4/episode_XXXX/`.
+
+Validate dataset (no Isaac):
+
+```bash
+python scripts/validate_lerobot_dataset.py
+```
+
+Fine-tune (no Isaac):
+
+```bash
+bash scripts/train_smolvla_pick_cube.sh
+```
+
+Eval with **required** camera MP4s:
+
+```bash
+python isaacsim_minimal_rollout.py --config-name=smolvla_pick_cube_eval \
+  smolvla.model_path=outputs/train/smolvla_pick_cube/checkpoints/last/pretrained_model
+```
+
+Eval videos: `outputs/rollouts/smolvla_pick_cube_eval/<timestamp>/camera_videos/*.mp4`.
 
 Common overrides:
 
 ```bash
 python isaacsim_minimal_rollout.py robot.gripper=franka sim.steps=240
-python isaacsim_minimal_rollout.py output.dir=rollouts/debug sim.save_every=5
+python isaacsim_minimal_rollout.py output.dir=outputs/rollouts/debug sim.save_every=5
 python isaacsim_minimal_rollout.py sim.require_cameras=true
 ```
 
@@ -170,22 +215,22 @@ Verify the images written under `camera_samples/` for each configured camera (ex
 Run a one-step camera check:
 
 ```bash
-python isaacsim_minimal_rollout.py sim.headless=true sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=rollouts/camera_alignment_check
+python isaacsim_minimal_rollout.py sim.headless=true sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=outputs/rollouts/camera_alignment_check
 ```
 
 Inspect the latest PNGs:
 
 ```text
-rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_exterior_image_1_left.png
-rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_wrist_image_left.png
-rollouts/camera_alignment_check/<latest>/camera_debug.json
+outputs/rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_exterior_image_1_left.png
+outputs/rollouts/camera_alignment_check/<latest>/camera_samples/step_0000_wrist_image_left.png
+outputs/rollouts/camera_alignment_check/<latest>/camera_debug.json
 ```
 
 For wrist camera debugging, run the UI with stage-tree, prim-pose, camera-pose,
 and marker output enabled:
 
 ```bash
-python isaacsim_minimal_rollout.py sim.headless=false sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=rollouts/wrist_debug_ui debug.print_stage_tree=true debug.print_camera_poses=true debug.print_prim_positions=true debug.add_camera_markers=true sim.keep_open_after_rollout=true
+python isaacsim_minimal_rollout.py sim.headless=false sim.steps=1 sim.require_cameras=true policy.kind=fake output.dir=outputs/rollouts/wrist_debug_ui debug.print_stage_tree=true debug.print_camera_poses=true debug.print_prim_positions=true debug.add_camera_markers=true sim.keep_open_after_rollout=true
 ```
 
 This prints the USD hierarchy and world poses for key prims such as

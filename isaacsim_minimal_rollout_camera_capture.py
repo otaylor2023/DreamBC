@@ -33,7 +33,8 @@ from dreambc_isaac.robot import (
 )
 from dreambc_isaac.robot_mounts import ensure_link7_wrist_camera_mount
 from dreambc_isaac.scene import add_simple_scene
-from dreambc_isaac.urdf import enable_first_available_urdf_extension, import_urdf
+from dreambc_isaac.franka_spawn import spawn_franka
+from dreambc_isaac.urdf import enable_first_available_urdf_extension
 
 
 @hydra.main(config_path="configs", config_name="minimal_rollout", version_base="1.3")
@@ -59,8 +60,7 @@ def main(cfg: DictConfig) -> None:
     add_simple_scene(world, cfg.scene, project_root)
 
     urdf_path = resolve_project_path(project_root, cfg.robot.urdfs[gripper])
-    robot_root_path = import_urdf(urdf_path, str(cfg.robot.target_path))
-    articulation_path = f"{robot_root_path}/{cfg.robot.articulation_child}"
+    articulation_path = spawn_franka(world, cfg, project_root, enable_extension)
     robot = Articulation(prim_paths_expr=articulation_path, name="panda")
     world.scene.add(robot)
 
