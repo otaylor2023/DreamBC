@@ -1,0 +1,13 @@
+{
+  "joint_positions": [
+    0.0586615,
+    -0.0916077,
+    -0.0963335,
+    -1.41376,
+    -0.125524,
+    1.44591,
+    0.746138
+  ],
+  "timestamp_unix": 1779049333.6867666,
+  "joint_positions_key": "opensai::sensors::FrankaRobot::joint_positions"
+}

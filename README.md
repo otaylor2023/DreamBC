@@ -2,6 +2,42 @@
 
 World-model policy improvement pipeline for robot manipulation in simulation and real-robot settings using Ctrl-World imagined rollouts and behavior cloning.
 
+## Week 6 Checkpoint
+### Project Questions / Goals
+
+Our project aims to study whether **Ctrl-World can help improve a VLA policy on robot manipulation tasks where the policy initially fails with π0.5**.
+
+The main questions we want to answer are:
+
+1. Can we identify tasks where a generally competent VLA policy fails?
+2. Can Ctrl-World-generated imagined trajectories help the policy improve on those failed tasks?
+3. Can the improved policy succeed on the target task without hurting performance on other tasks?
+
+### Evaluation Plan
+
+To evaluate our questions, we would like to apply a straightforward approach including the evaluation of the VLA policy before and after making improvements.
+
+Specifically, the plan includes the following experiments:
+
+1. Evaluate the VLA policy in several Franka manipulation tasks.
+2. Find two to three tasks that fail or show poor results.
+3. Generate the imaginary rollout trajectories for these tasks.
+4. Choose the successful trajectories.
+5. Improve the policy based on these data.
+6. Re-run the test.
+
+We will consider the project successful if the policy improves from failure to success on at least one target task, or if the success rate clearly increases after using Ctrl-World-generated trajectories.
+
+## Current Progress
+
+So far, we have collected **5 trajectories for 5 different manipulation tasks** using the real Franka robot. For every task, we saved the **task prompt**, **robot actions**, and **video recording**.
+
+Originally, we planned to test **π0.5** directly in PyBullet, but we were not able to run π0.5 successfully in it. Therefore, we shifted our current focus to **real-world task data collection on the Franka arm**.
+
+The simulation code is on `wayne` branch. 
+
+---
+
 ## Overview
 
 DreamBC focuses on generating synthetic robot trajectories in imagination and using them to improve policy performance for both sim and real robots with minimal real-world interaction.
