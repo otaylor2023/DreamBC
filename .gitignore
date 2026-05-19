@@ -1,1 +1,6 @@
-Ctrl-World/
+.mamba/
+openpi/
+outputs/
+rollouts/
+.codex
+*.pt
