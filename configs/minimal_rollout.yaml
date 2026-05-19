@@ -1,0 +1,163 @@
+project_root: .
+
+sim:
+  headless: false
+  steps: 120
+  warmup_steps: 20
+  save_every: 10
+  stage_units_in_meters: 1.0
+  require_cameras: false
+  keep_open_after_rollout: true
+  # One MP4 per camera under output_dir/camera_videos/ (requires imageio + imageio-ffmpeg).
+  save_camera_videos: true
+  video_fps: 20
+
+robot:
+  gripper: franka
+  # Franka Emika Panda: Isaac asset matches Lula IK / RMPFlow (recommended).
+  source: isaac_franka
+  prim_path: /World/Panda
+  target_path: /World/Panda
+  articulation_child: Robot
+  locked_base_joint_names: []
+  initial_locked_base_joint_positions: {}
+  arm_joint_names: [panda_joint1, panda_joint2, panda_joint3, panda_joint4, panda_joint5, panda_joint6, panda_joint7]
+  initial_arm_joint_positions: [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
+  initial_gripper_position:
+    franka: 0.04
+  gripper_joint_names:
+    franka: [panda_finger_joint1, panda_finger_joint2]
+  urdfs:
+    franka: urdf_models/franka_description/panda_arm_hand_isaac.urdf
+
+scene:
+  # Defaults tuned for RTX path tracing: previous 1800/2200 dome+key blew highlights (washed, pale).
+  lighting:
+    dome_intensity: 520.0
+    distant_intensity: 680.0
+  table:
+    prim_path: /World/Table
+    name: table
+    position: [0.55, 0.0, 0.0]
+    scale: [0.80, 0.55, 0.06]
+    color: [0.45, 0.45, 0.42]
+  test_cube:
+    enabled: true
+    prim_path: /World/TestCube
+    name: test_cube
+    position: [0.55, 0.0, 0.1]
+    scale: [0.05, 0.05, 0.05]
+    color: [0.9, 0.12, 0.08]
+  props:
+    enabled: true
+    meshes:
+      pencil:
+        mesh_path: assets/objects/pencil/pencil.obj
+        prim_path: /World/Props/Pencil
+        placement_anchor: bottom_center
+        position: [0.55, 0.0, 0.03]
+        # Native long axis +X (~19 cm); no spin — lies on table along X toward the robot.
+        scale: [1.0, 1.0, 1.0]
+        rotate_xyz_deg: [0.0, 0.0, 0.0]
+      pencil_sharpener:
+        mesh_path: assets/objects/pencil_sharpener/pencil_sharpener.glb
+        prim_path: /World/Props/PencilSharpener
+        placement_anchor: bottom_center
+        position: [0.58, 0.05, 0.03]
+        # 6 in on longest mesh axis (native +Y); X-90 stands it on the table (world +Z up).
+        target_height_m: 0.1524
+        height_axis: max
+        rotate_xyz_deg: [90.0, 0.0, 0.0]
+  # Fixed Xform on imported `panda_link7` (URDF link7). Wrist camera is parented here — same kinematics
+  # as a zero-DOF child link on joint 7, without editing the URDF.
+  link7_wrist_camera_mount:
+    enabled: true
+    parent_prim: /World/Panda/panda_link7
+    mount_name: wrist_camera_mount
+    # Link7 frame: offset along -Y; +45° about link7 +Z on the mount Xform.
+    mount_translation: [0.0, -0.06, 0.123]
+    mount_rotate_z_deg: 45.0
+    visible_box: true
+    # Mount origin = box center; dot/camera on center of +Z front face (not the narrow +X side).
+    box_half_extents: [0.022, 0.016, 0.012]
+    box_color_rgb: [0.48, 0.5, 0.52]
+    dot_face: z_positive
+    dot_radius: 0.005
+    dot_color_rgb: [0.92, 0.14, 0.1]
+
+# Multi-view layout: two exterior cameras, one wide overview, one wrist camera on link7 (see scene.link7_wrist_camera_mount).
+cameras:
+  exterior_image_1_left:
+    prim_path: /World/Cameras/exterior_image_1_left
+    # -Y side, pulled back and raised so the arm is not cropped out.
+    position: [0.05, -1.58, 1.22]
+    look_at: [0.55, 0.0, 0.20]
+    frequency: 20
+    resolution: [640, 480]
+    horizontal_aperture: 3.85
+  exterior_image_2_left:
+    prim_path: /World/Cameras/exterior_image_2_left
+    # +Y side, complementary exterior.
+    position: [0.05, 1.52, 1.16]
+    look_at: [0.55, 0.0, 0.20]
+    frequency: 20
+    resolution: [640, 480]
+    horizontal_aperture: 3.85
+  # Wide spectator: further back on +X, higher, look_at above table plane so the view is less top-down and shows full arm + table.
+  scene_overview:
+    prim_path: /World/Cameras/scene_overview
+    position: [2.55, 0.0, 1.28]
+    # Slightly lower look_at Z than before → a bit more downward tilt toward table/workspace.
+    look_at: [0.35, 0.0, 0.28]
+    frequency: 20
+    resolution: [640, 352]
+    horizontal_aperture: 4.1
+  wrist_image_left:
+    # Locked from wrist_sweep_rot_yz/05_z_+090_x90 (X+90°, Z+90° post); dot on mount +Z front face.
+    prim_path: /World/Panda/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    translation: [0.0, 0.0, 0.0]
+    view_forward_xyz: [1.0, 0.0, 0.0]
+    view_up_xyz: [0.0, 0.0, 1.0]
+    orientation_post_euler_xyz_degrees: [90.0, 0.0, 90.0]
+    horizontal_aperture: 3.6
+    focal_length: 1.12
+    clipping_range: [0.04, 100.0]
+    frequency: 20
+    resolution: [640, 480]
+fake_policy:
+  phase_scale: 0.045
+  arm_offsets: [0.04, -0.03, 0.03, -0.04, 0.02, 0.015, -0.02]
+  gripper_period_steps: 40
+  gripper_open_target: 0.04
+  gripper_closed_target: 0.02
+
+policy:
+  kind: fake
+
+output:
+  dir: outputs/rollouts/minimal_rollout
+  timestamp_format: "%Y%m%d_%H%M%S"
+
+debug:
+  print_stage_tree: false
+  stage_tree_root: /World/Panda
+  stage_tree_max_depth: 3
+  print_camera_poses: false
+  print_prim_positions: false
+  prim_position_paths:
+    - /World/Panda/panda_link7
+    - /World/Panda/panda_hand
+    - /World/Panda/panda_leftfinger
+    - /World/Panda/panda_rightfinger
+    - /World/Panda/panda_link7/wrist_camera_mount/dot_mount/wrist_image_left
+    - /World/Table
+    - /World/Props/Pencil
+    - /World/Props/PencilSharpener
+    - /World/TestCube
+  add_camera_markers: false
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${project_root}/outputs/hydra/${now:%Y%m%d_%H%M%S}

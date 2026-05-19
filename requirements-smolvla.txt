@@ -1,0 +1,4 @@
+# Optional: SmolVLA inference in the dreambc env (install after Isaac Sim deps).
+# Keep numpy compatible with Isaac Sim (1.26.x); if lerobot upgrades numpy, run:
+#   pip install "numpy>=1.26,<2"
+lerobot[smolvla]

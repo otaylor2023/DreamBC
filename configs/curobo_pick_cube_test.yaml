@@ -1,0 +1,24 @@
+# Short RMPFlow pick collection with preview MP4s for every episode (including failures).
+# Run: python isaacsim_curobo_collect_dataset.py --config-name=curobo_pick_cube_test
+
+defaults:
+  - curobo_pick_cube_dataset
+  - _self_
+
+dataset:
+  num_episodes: 5
+  root: ${project_root}/data/lerobot/dreambc_franka_pick_cube_test
+  min_cube_lift_m: 0.025
+  preview_mp4_all_episodes: true
+  preview_mp4_save_discarded: true
+  preview_mp4_every_n_episodes: 1
+  preview_mp4_max_count: 1000
+
+curobo:
+  planner_backend: rmpflow
+
+sim:
+  steps_per_waypoint: 4
+
+output:
+  dir: outputs/demos/test_logs

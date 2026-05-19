@@ -1,0 +1,10 @@
+# Optional CuRobo motion planning (not used by default dataset collection).
+# Do NOT use PyPI `nvidia-curobo==0.1` (stub). Install from NVlabs:
+#
+#   pip install "git+https://github.com/NVlabs/curobo.git"
+#   pip install cuda-python
+#
+# CuRobo cannot run in-process with Isaac Sim (Warp version clash). Default collection
+# uses Isaac Lula IK (see dreambc_isaac/lula_pick_planner.py, curobo.enabled=false).
+#
+# May upgrade websockets; if Isaac Sim warns, reinstall: pip install "websockets==12.0"

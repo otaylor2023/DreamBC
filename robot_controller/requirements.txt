@@ -1,0 +1,16 @@
+# DreamBC robot-side capture tools (capture_data.py).
+# Install:
+#   conda create -n dreambc_robot python=3.11 -y
+#   conda activate dreambc_robot
+#   pip install -r DreamBC/robot_controller/requirements.txt
+#
+# Test camera only (no Redis):
+#   python DreamBC/robot_controller/vision/test_camera.py
+#
+# Capture (Redis + Franka drivers must publish sensor keys):
+#   python DreamBC/robot_controller/capture_data.py <object_name>
+
+numpy
+opencv-python
+pyrealsense2
+redis

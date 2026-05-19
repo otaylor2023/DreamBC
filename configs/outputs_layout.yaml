@@ -1,0 +1,9 @@
+# Shared output paths (import via defaults in rollout / collect configs).
+# Layout:
+#   outputs/demos/logs/     — dataset collection summaries
+#   outputs/rollouts/<name>/ — policy / debug rollout artifacts (+ timestamp subdirs)
+#   outputs/train/          — lerobot training checkpoints
+
+paths:
+  demos_logs: ${project_root}/outputs/demos/logs
+  demos_test_logs: ${project_root}/outputs/demos/test_logs
