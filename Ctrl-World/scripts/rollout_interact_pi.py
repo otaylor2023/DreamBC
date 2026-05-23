@@ -312,6 +312,12 @@ if __name__ == "__main__":
         "openpi/checkpoint/pi05_droid",
     )
     parser.add_argument('--pi_ckpt', type=str, default=default_pi_ckpt)
+    parser.add_argument('--val_dataset_dir', type=str, default=None)
+    parser.add_argument('--val_ids', type=str, default=None, help='Comma-separated policy rollout episode ids.')
+    parser.add_argument('--start_idxs', type=str, default=None, help='Comma-separated start indices; defaults to 0 for each val id.')
+    parser.add_argument('--instructions', type=str, default=None, help='Optional ||-separated instructions matching val_ids.')
+    parser.add_argument('--save_dir', type=str, default=None)
+    parser.add_argument('--data_stat_path', type=str, default=None)
     args_new = parser.parse_args()
 
     args = wm_args(task_type=args_new.task_type)
@@ -323,6 +329,24 @@ if __name__ == "__main__":
         return cfg
 
     args = resolve_paths(merge_args(args, args_new))
+    if args_new.val_ids is not None:
+        args.val_id = [item.strip() for item in args_new.val_ids.split(',') if item.strip()]
+        if args_new.start_idxs is None:
+            args.start_idx = [0] * len(args.val_id)
+        else:
+            args.start_idx = [int(item.strip()) for item in args_new.start_idxs.split(',') if item.strip()]
+            if len(args.start_idx) == 1 and len(args.val_id) > 1:
+                args.start_idx = args.start_idx * len(args.val_id)
+            if len(args.start_idx) != len(args.val_id):
+                raise ValueError(f"start_idxs length {len(args.start_idx)} does not match val_ids length {len(args.val_id)}")
+        if args_new.instructions is None:
+            args.instruction = args.instruction[:1] * len(args.val_id)
+        else:
+            args.instruction = [item.strip() for item in args_new.instructions.split('||')]
+            if len(args.instruction) == 1 and len(args.val_id) > 1:
+                args.instruction = args.instruction * len(args.val_id)
+            if len(args.instruction) != len(args.val_id):
+                raise ValueError(f"instructions length {len(args.instruction)} does not match val_ids length {len(args.val_id)}")
 
     # create agent
     Agent = agent(args)

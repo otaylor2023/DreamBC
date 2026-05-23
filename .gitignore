@@ -1,6 +1,21 @@
 .mamba/
-openpi/
-outputs/
-rollouts/
 .codex
 *.pt
+
+# Large binary files and datasets
+vis_comp_high_res.zip
+vis_comp_high_res/
+Ctrl-World/dataset_example/vis_comp/
+Ctrl-World/dataset_example/vis_comp_corrected/
+Ctrl-World/dataset_example/vis_comp_corrected_bright/
+
+# macOS unzip artifact
+__MACOSX/
+
+# Third-party library (use submodule or separate install instead)
+Ctrl-World/openpi/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

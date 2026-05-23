@@ -82,6 +82,11 @@ We provide a very small subset of DROID dataset in `dataset_example/droid_subset
 ```bash
 CUDA_VISIBLE_DEVICES=0 python scripts/rollout_replay_traj.py  --dataset_root_path dataset_example --dataset_meta_info_path dataset_meta_info --dataset_names droid_subset --svd_model_path ${path to svd folder} --clip_model_path ${path to clip folder} --ckpt_path ${path to ctrl-world ckpt}
 ```
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python scripts/rollout_replay_traj.py   --task_type replay   --val_dataset_dir dataset_example/vis_comp_high_res   --val_ids 0001   --start_idxs 0   --dataset_root_path dataset_example   --dataset_meta_info_path dataset_meta_info   --dataset_names droid_subset   --svd_model_path /home/wpai/.cache/huggingface/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e   --clip_model_path /home/wpai/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268   --ckpt_path checkpoint/checkpoint-10000.pt
+```
+
 The rollout configuration can be found in `config.py` in function `__post_init__`.
 If you want to replay more trajectories, you need to download and process the original DROID datasets following the instructions in training section.
 
@@ -101,6 +106,21 @@ For example, you can run the following command:
 CUDA_VISIBLE_DEVICES=0 python scripts/rollout_key_board.py  --dataset_root_path dataset_example --dataset_meta_info_path dataset_meta_info --dataset_names droid_subset --svd_model_path ${path to svd folder} --clip_model_path ${path to clip folder} --ckpt_path ${path to ctrl-world ckpt} --task_type keyboard --keyboard lllrrr
 ```
 
+```bash
+CUDA_VISIBLE_DEVICES=0 python scripts/rollout_key_board.py \
+  --task_type keyboard \
+  --keyboard lllrrr \
+  --val_dataset_dir dataset_example/vis_comp_high_res \
+  --val_ids 0001 \
+  --start_idxs 0 \
+  --dataset_root_path dataset_example \
+  --dataset_meta_info_path dataset_meta_info \
+  --dataset_names droid_subset \
+  --svd_model_path /home/wpai/.cache/huggingface/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e \
+  --clip_model_path /home/wpai/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 \
+  --ckpt_path checkpoint/checkpoint-10000.pt
+```
+
 ### 📊 (3) Interact with $\pi_{0.5}$ model within world model
 
 **Task Description:** We take some snapshot from a new DROID setup and perform policy-in-the-loop rollouts inside world model. Both $\pi_{0.5}$ and Ctrl-World need to zero-shot transferr to new setups.
@@ -113,6 +133,23 @@ We also need to download official $\pi_{0.5}$-DROID checkpoint following [offici
 CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 python scripts/rollout_interact_pi.py  --dataset_root_path dataset_example --dataset_meta_info_path dataset_meta_info --dataset_names droid_subset --svd_model_path ${path to svd folder} --clip_model_path ${path to clip folder} --ckpt_path ${path to ctrl-world ckpt} --pi_ckpt ${path to ctrl-world ckpt} --task_type ${pickplace}
 ```
 Alternatively, you can configure all parameters in config.py and run `CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 python rollout_interact_pi.py`. Since the official $\pi_{0.5}$ policies are implemented in JAX, we need to set XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 to prevent JAX from pre-allocating too much GPU memory.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 python scripts/rollout_interact_pi.py \
+  --task_type pickplace \
+  --val_dataset_dir dataset_example/vis_comp_high_res \
+  --val_ids 0001 \
+  --start_idxs 0 \
+  --instructions "pick up the white napkin and place it in the gray plate" \
+  --dataset_root_path dataset_example \
+  --dataset_meta_info_path dataset_meta_info \
+  --dataset_names droid_subset \
+  --svd_model_path /home/wpai/.cache/huggingface/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e \
+  --clip_model_path /home/wpai/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 \
+  --ckpt_path checkpoint/checkpoint-10000.pt \
+  --pi_ckpt openpi/checkpoint/pi05_droid
+```
+
 
 ### 📊 (3) <span style="color:red;">New</span>: Interact with $\pi_{0.5}$ model within world model with initial conditions in the paper
 In the paper, we run each category of task for 20 times. Each category of task may have 5 or 10 initial configurations and repeat for 2 or 4 times (20 times in total). You can run following command by settng `task_type` you want. All initial condition is in `dataset_example/droid_new_setup_full`.

@@ -8,7 +8,7 @@ synthetic_traj_old*
 old_files*
 video_models_logs*
 model_ckpt*
-synthetic_traj/Rollout*
+# synthetic_traj/Rollout*
 dataset_example/droid_subset/annotation/val_old*
 dataset_example/droid_new_setup_eval*
 .vscode
