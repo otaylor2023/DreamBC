@@ -16,6 +16,25 @@ def _natural_id(path: Path, prefix: str, suffix: str) -> int:
     return int(match.group(1))
 
 
+def _camera_video_groups(source_dir: Path) -> dict[int, list[Path]]:
+    groups: dict[int, dict[int, Path]] = {}
+    for path in source_dir.glob("video_*_cam*.mp4"):
+        match = re.fullmatch(r"video_(\d+)_cam(\d+)\.mp4", path.name)
+        if not match:
+            continue
+        demo_id = int(match.group(1))
+        cam_id = int(match.group(2))
+        groups.setdefault(demo_id, {})[cam_id] = path
+
+    complete_groups = {}
+    for demo_id, cam_paths in groups.items():
+        missing = [cam_id for cam_id in (1, 2, 3) if cam_id not in cam_paths]
+        if missing:
+            raise RuntimeError(f"Missing camera videos for demo {demo_id}: cam{missing}")
+        complete_groups[demo_id] = [cam_paths[cam_id] for cam_id in (1, 2, 3)]
+    return complete_groups
+
+
 def _convert_gripper(gripper: np.ndarray, mode: str, scale: float) -> np.ndarray:
     if mode == "raw":
         converted = gripper
@@ -81,6 +100,63 @@ def _placeholder_annotation(n_frames: int) -> dict:
     }
 
 
+def _write_camera_videos(
+    source_paths: list[Path],
+    output_dir: Path,
+    episode_id: str,
+    width: int,
+    height: int,
+    fps: float,
+) -> tuple[int, int, int]:
+    caps = [cv2.VideoCapture(str(source_path)) for source_path in source_paths]
+    for source_path, cap in zip(source_paths, caps):
+        if not cap.isOpened():
+            raise RuntimeError(f"Could not open {source_path}")
+
+    fps_in = caps[0].get(cv2.CAP_PROP_FPS) or 15.0
+    raw_frames = min(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) for cap in caps)
+    sample_every = max(1, round(fps_in / fps))
+    video_dir = output_dir / "videos" / "val" / episode_id
+    video_dir.mkdir(parents=True, exist_ok=True)
+
+    writers = []
+    for view_id in range(3):
+        writer = cv2.VideoWriter(
+            str(video_dir / f"{view_id}.mp4"),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            (width, height),
+        )
+        if not writer.isOpened():
+            raise RuntimeError(f"Could not open writer for {video_dir / f'{view_id}.mp4'}")
+        writers.append(writer)
+
+    written = 0
+    frame_idx = 0
+    while frame_idx < raw_frames:
+        frames = []
+        for cap in caps:
+            ok, frame = cap.read()
+            if not ok:
+                frames = []
+                break
+            frames.append(frame)
+        if not frames:
+            break
+        if frame_idx % sample_every == 0:
+            for writer, frame in zip(writers, frames):
+                resized = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+                writer.write(resized)
+            written += 1
+        frame_idx += 1
+
+    for cap in caps:
+        cap.release()
+    for writer in writers:
+        writer.release()
+    return raw_frames, written, sample_every
+
+
 def _write_split_videos(source_path: Path, output_dir: Path, episode_id: str, width: int, height: int, fps: float) -> tuple[int, int, int]:
     cap = cv2.VideoCapture(str(source_path))
     if not cap.isOpened():
@@ -129,18 +205,31 @@ def _write_split_videos(source_path: Path, output_dir: Path, episode_id: str, wi
 def convert(args: argparse.Namespace) -> None:
     source_dir = Path(args.source_dir)
     output_dir = Path(args.output_dir)
-    video_paths = sorted(source_dir.glob("video_*.mp4"), key=lambda p: _natural_id(p, "video", ".mp4"))
-    if not video_paths:
-        raise RuntimeError(f"No video_*.mp4 found in {source_dir}")
+    camera_groups = _camera_video_groups(source_dir)
+    if camera_groups:
+        video_items = [(demo_id, paths) for demo_id, paths in sorted(camera_groups.items())]
+    else:
+        video_paths = sorted(source_dir.glob("video_*.mp4"), key=lambda p: _natural_id(p, "video", ".mp4"))
+        video_items = [(_natural_id(path, "video", ".mp4"), [path]) for path in video_paths]
+    if not video_items:
+        raise RuntimeError(f"No video_*.mp4 or video_*_cam*.mp4 found in {source_dir}")
 
     val_ids = []
     report = []
-    for video_path in video_paths:
-        demo_id = _natural_id(video_path, "video", ".mp4")
+    for demo_id, source_paths in video_items:
         episode_id = f"{demo_id:04d}"
-        raw_frames, video_length, sample_every = _write_split_videos(
-            video_path, output_dir, episode_id, args.width, args.height, args.fps
-        )
+        if len(source_paths) == 3:
+            raw_frames, video_length, sample_every = _write_camera_videos(
+                source_paths, output_dir, episode_id, args.width, args.height, args.fps
+            )
+            source_layout = "three separate 1280x720 camera videos"
+            middle_view = "source_cam2"
+        else:
+            raw_frames, video_length, sample_every = _write_split_videos(
+                source_paths[0], output_dir, episode_id, args.width, args.height, args.fps
+            )
+            source_layout = "two horizontal 1280x720 camera views split from 2560x720"
+            middle_view = "duplicate_view_0"
 
         hdf5_path = source_dir / f"demos_{demo_id}.hdf5"
         hdf5_status = "missing"
@@ -165,12 +254,12 @@ def convert(args: argparse.Namespace) -> None:
             "latent_videos": [{"latent_video_path": f"latent_videos/val/{episode_id}/{view_id}.pt"} for view_id in range(3)],
             **{key: value for key, value in ann_arrays.items() if key != "annotation_state_source"},
             "metadata": {
-                "source_video": str(video_path),
+                "source_videos": [str(path) for path in source_paths],
                 "source_hdf5": str(hdf5_path),
                 "source_hdf5_status": hdf5_status,
                 "annotation_state_source": ann_arrays["annotation_state_source"],
-                "source_layout": "two horizontal 1280x720 camera views split from 2560x720",
-                "middle_view": "duplicate_view_0",
+                "source_layout": source_layout,
+                "middle_view": middle_view,
                 "sample_every": sample_every,
             },
         }

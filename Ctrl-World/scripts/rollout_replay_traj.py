@@ -235,6 +235,9 @@ if __name__ == "__main__":
     parser.add_argument('--start_idxs', type=str, default=None, help='Comma-separated start indices; defaults to 0 for each val id.')
     parser.add_argument('--save_dir', type=str, default=None)
     parser.add_argument('--data_stat_path', type=str, default=None)
+    parser.add_argument('--interact_num', type=int, default=None)
+    parser.add_argument('--pred_step', type=int, default=None)
+    parser.add_argument('--output_fps', type=float, default=4.0)
     args_new = parser.parse_args()
 
     args = wm_args(task_type=args_new.task_type)
@@ -344,7 +347,7 @@ if __name__ == "__main__":
         uuid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename_video = f"{args.save_dir}/{task_name}/video/time_{uuid}_traj_{val_id_i}_{start_idx_i}_{pred_step}_{text_id}.mp4"
         os.makedirs(os.path.dirname(filename_video), exist_ok=True)
-        mediapy.write_video(filename_video, video, fps=4)
+        mediapy.write_video(filename_video, video, fps=args.output_fps)
         print(f"Saving video to {filename_video}")
         print("##########################################################################")
 

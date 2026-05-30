@@ -86,7 +86,7 @@ class wm_args:
     # model parameters
     motion_bucket_id = 127
     fps = 7
-    guidance_scale = 1.0 #2.0 #7.5 #7.5 #7.5 #3.0
+    guidance_scale = 7.5 #2.0 #7.5 #7.5 #7.5 #3.0
     num_inference_steps = 50
     decode_chunk_size = 7
     width = 320

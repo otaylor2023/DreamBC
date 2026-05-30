@@ -265,6 +265,7 @@ class agent():
         gripper_pos = gripper_pos[idx]  # (15, 1)
         gripper_max = self.args.gripper_max
         gripper_pos = np.clip(gripper_pos, 0, gripper_max)
+        z_min = self.args.z_min
         # calculate future joint positions
         joint_pos = self.dynamics_model(current_joint, joint_vel,None, training=False)
         # fk
@@ -275,6 +276,8 @@ class agent():
         for i in range(joint_pos.shape[0]):
             current_state_fk = get_fk_solution(joint_pos[i,:7])
             xyz = current_state_fk[:3, 3]
+            # clip z axis to avoid collision with table
+            xyz[2] = np.clip(xyz[2], z_min, None)
             rotation_matrix = current_state_fk[:3, :3]
             r = R.from_matrix(rotation_matrix)
             euler = r.as_euler('xyz') 

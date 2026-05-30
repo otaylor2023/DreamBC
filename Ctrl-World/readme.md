@@ -84,7 +84,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/rollout_replay_traj.py  --dataset_root_pat
 ```
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python scripts/rollout_replay_traj.py   --task_type replay   --val_dataset_dir dataset_example/vis_comp_high_res   --val_ids 0001   --start_idxs 0   --dataset_root_path dataset_example   --dataset_meta_info_path dataset_meta_info   --dataset_names droid_subset   --svd_model_path /home/wpai/.cache/huggingface/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e   --clip_model_path /home/wpai/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268   --ckpt_path checkpoint/checkpoint-10000.pt
+CUDA_VISIBLE_DEVICES=0 python scripts/rollout_replay_traj.py   --task_type replay   --val_dataset_dir dataset_example/vis_comp_iphone_cube   --val_ids 0005   --start_idxs 0   --dataset_root_path dataset_example   --dataset_meta_info_path dataset_meta_info   --dataset_names droid_subset   --svd_model_path /home/wpai/.cache/huggingface/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e   --clip_model_path /home/wpai/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268   --ckpt_path checkpoint/checkpoint-10000.pt --interact_num 22
 ```
 
 The rollout configuration can be found in `config.py` in function `__post_init__`.
@@ -137,10 +137,10 @@ Alternatively, you can configure all parameters in config.py and run `CUDA_VISIB
 ```bash
 CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 python scripts/rollout_interact_pi.py \
   --task_type pickplace \
-  --val_dataset_dir dataset_example/vis_comp_high_res \
-  --val_ids 0001 \
+  --val_dataset_dir dataset_example/vis_comp_iphone_3 \
+  --val_ids 0003 \
   --start_idxs 0 \
-  --instructions "pick up the white napkin and place it in the gray plate" \
+  --instructions "pick up the red tomato and place it in the blue bowl" \
   --dataset_root_path dataset_example \
   --dataset_meta_info_path dataset_meta_info \
   --dataset_names droid_subset \
