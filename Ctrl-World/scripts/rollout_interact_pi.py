@@ -27,6 +27,7 @@ from decord import VideoReader, cpu
 import swanlab
 import mediapy
 import sys
+import hashlib
 from scipy.spatial.transform import Rotation as R
 
 import sys, os
@@ -224,11 +225,11 @@ class agent():
         videos = ((videos / 2.0 + 0.5).clamp(0, 1)*255)
         videos = videos.detach().to(torch.float32).cpu().numpy().transpose(0,1,3,4,2).astype(np.uint8)
 
-        # concatenate true videos and video
-        videos_cat = np.concatenate([true_video,videos],axis=-3) # (3, 8, 256, 256, 3)
-        videos_cat = np.concatenate([video for video in videos_cat],axis=-2).astype(np.uint8) 
+        # concatenate predicted-only cameras horizontally (drop ground truth row)
+        # videos shape: (cams=3, frames, H, W, 3) -> (frames, H, W*3, 3) at native res
+        videos_cat = np.concatenate([v for v in videos], axis=-2).astype(np.uint8)
 
-        return videos_cat, true_video, videos, latents  # np.uint8:(3, 8, 128, 256, 3) or (3, 8, 192, 320, 3)
+        return videos_cat, true_video, videos, latents  # np.uint8: (frames, H, W*3, 3) = (frames, 192, 960, 3)
 
     def forward_policy(self, videos, state, joints, text, time_step=1):
         
@@ -249,7 +250,8 @@ class agent():
             "observation/gripper_position": joints[-1:],
             "prompt": text,
         }
-        action_chunk = self.policy.infer(example)["actions"] #(10,8) velocity
+        action_chunk_raw = np.asarray(self.policy.infer(example)["actions"], dtype=np.float32)
+        action_chunk = action_chunk_raw.copy()
 
         # action adapater
         current_joint = joints[None,:][:,:7]
@@ -296,7 +298,16 @@ class agent():
         joint_pos_skip = joint_pos[::skip][:self.args.pred_step]  # (5, 7)
         joint_pos_skip = np.concatenate([joint_pos_skip, state_fk_skip[:,-1:]], axis=-1) # (5, 8) add gripper pos
 
-        return policy_in_out, joint_pos_skip, state_fk_skip
+        policy_bc = {
+            "policy_obs_exterior": np.asarray(example["observation/exterior_image_1_left"], dtype=np.uint8),
+            "policy_obs_wrist": np.asarray(example["observation/wrist_image_left"], dtype=np.uint8),
+            "policy_state_joint": np.asarray(joints[:7], dtype=np.float32),
+            "policy_state_gripper": np.asarray(joints[-1:], dtype=np.float32),
+            "policy_action_chunk": action_chunk_raw,
+            "policy_prompt": text,
+        }
+
+        return policy_in_out, joint_pos_skip, state_fk_skip, policy_bc
 
     
 if __name__ == "__main__":
@@ -321,6 +332,10 @@ if __name__ == "__main__":
     parser.add_argument('--instructions', type=str, default=None, help='Optional ||-separated instructions matching val_ids.')
     parser.add_argument('--save_dir', type=str, default=None)
     parser.add_argument('--data_stat_path', type=str, default=None)
+    parser.add_argument('--guidance_scale', type=float, default=None, help='CFG scale for the world model. Default 7.5.')
+    parser.add_argument('--num_inference_steps', type=int, default=None, help='Diffusion sampling steps per world-model call. Default 50.')
+    parser.add_argument('--z_min', type=float, default=None, help='Minimum allowed gripper Z (table clamp). Default 0.23 for pickplace.')
+    parser.add_argument('--interact_num', type=int, default=None, help='Number of policy<->WM interaction rounds. Default 15 for pickplace.')
     args_new = parser.parse_args()
 
     args = wm_args(task_type=args_new.task_type)
@@ -359,6 +374,50 @@ if __name__ == "__main__":
     num_frames = args.num_frames
     history_idx = args.history_idx
 
+    def _file_sha256_prefix(path, n=12):
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest()[:n]
+
+    os.makedirs(args.save_dir, exist_ok=True)
+    sweep_config = {
+        "created_at": datetime.datetime.now().isoformat(),
+        "task_type": args.task_type,
+        "task_name": args.task_name,
+        "val_dataset_dir": str(args.val_dataset_dir),
+        "val_ids": list(args.val_id),
+        "start_idx": list(args.start_idx),
+        "instructions": list(args.instruction),
+        "save_dir": str(args.save_dir),
+        "guidance_scale": float(args.guidance_scale),
+        "num_inference_steps": int(args.num_inference_steps),
+        "z_min": float(args.z_min),
+        "interact_num": int(args.interact_num),
+        "action_horizon": 15,
+        "pred_step": int(args.pred_step),
+        "policy_skip_step": int(args.policy_skip_step),
+        "num_frames": int(args.num_frames),
+        "num_history": int(args.num_history),
+        "decode_chunk_size": int(args.decode_chunk_size),
+        "gripper_max": float(args.gripper_max),
+        "policy_type": args.policy_type,
+        "policy_ckpt": str(args.pi_ckpt),
+        "ctrl_world_ckpt": str(args.ckpt_path),
+        "ctrl_world_ckpt_sha256_prefix": _file_sha256_prefix(args.ckpt_path),
+        "svd_model_path": str(args.svd_model_path),
+        "clip_model_path": str(args.clip_model_path),
+        "data_stat_path": str(args.data_stat_path),
+        "width": int(args.width),
+        "height": int(args.height),
+        "fps": int(args.fps),
+        "text_cond": bool(args.text_cond),
+    }
+    with open(os.path.join(args.save_dir, "sweep_config.json"), "w") as f:
+        json.dump(sweep_config, f, indent=2)
+    print(f"Wrote sweep config to {os.path.join(args.save_dir, 'sweep_config.json')}")
+
     # run len(val_id) trajectory
     for val_id_i, text_i, start_idx_i in zip(args.val_id, args.instruction, args.start_idx):
 
@@ -369,6 +428,13 @@ if __name__ == "__main__":
 
         # initialize all history buffer
         video_to_save, info_to_save = [], []
+        # per-camera predicted frame buffers (one list per of the 3 cams) for BC bundle
+        pred_cam_buffers = [[], [], []]
+        policy_obs_exterior_buf = []
+        policy_obs_wrist_buf = []
+        policy_state_joint_buf = []
+        policy_state_gripper_buf = []
+        policy_action_chunk_buf = []
         his_cond, his_joint, his_eef = [], [], []
         first_latent = torch.cat([v[0] for v in video_latents], dim=1).unsqueeze(0)  # (1, 4, 72, 40)
         assert first_latent.shape == (1, 4, 72, 40), f"Expected first_latent shape (1, 4, 72, 40), got {first_latent.shape}"
@@ -377,6 +443,8 @@ if __name__ == "__main__":
             his_joint.append(joint_pos_gt[0:1])  # (1, 7)
             his_eef.append(eef_gt[0:1])  # (1, 7)
         video_dict_pred = [v[0:1] for v in video_dict]
+        # initial-frame snapshot (3 cams) for the BC bundle
+        initial_images = np.stack([v[0] for v in video_dict], axis=0)  # (3, H, W, 3) uint8
 
 
         # start rollout
@@ -393,7 +461,12 @@ if __name__ == "__main__":
             current_pose = his_eef[-1][0] # (1, 8)
             current_obs = [v[-1] for v in video_dict_pred] 
             # forward policy
-            policy_in_out, joint_pos, cartesian_pose= Agent.forward_policy(current_obs, current_pose, current_joint, text=text_i)
+            policy_in_out, joint_pos, cartesian_pose, policy_bc = Agent.forward_policy(current_obs, current_pose, current_joint, text=text_i)
+            policy_obs_exterior_buf.append(policy_bc["policy_obs_exterior"])
+            policy_obs_wrist_buf.append(policy_bc["policy_obs_wrist"])
+            policy_state_joint_buf.append(policy_bc["policy_state_joint"])
+            policy_state_gripper_buf.append(policy_bc["policy_state_gripper"])
+            policy_action_chunk_buf.append(policy_bc["policy_action_chunk"])
             print("cartesian space action", cartesian_pose[0]) # output xyz and gripper for debug
             print("cartesian space action", cartesian_pose[-1]) # output xyz and gripper for debug
 
@@ -416,6 +489,9 @@ if __name__ == "__main__":
             his_cond.append(torch.cat([v[pred_step-1] for v in predict_latents], dim=1).unsqueeze(0))  # (1, 4, 72, 40)
             video_to_save.append(videos_cat[:pred_step-1])
             info_to_save.append(policy_in_out)  # save policy output info
+            # per-camera predicted frames for BC bundle (drop last = first of next step)
+            for c in range(3):
+                pred_cam_buffers[c].append(video_dict_pred[c][:pred_step-1])
             
 
         # save rollout video and info with parameters
@@ -438,6 +514,99 @@ if __name__ == "__main__":
         with open(filename_info, 'w') as f:
             json.dump(info, f, indent=4)
         print(f"Saving trajectory info to {filename_info}")
+
+        # ---- BC-ready bundle ----
+        # Per episode we write:
+        #   episode.npz       initial_images, predicted images per camera, all action/state arrays
+        #   episode.json      instruction, source snapshot path, frame/action counts, ckpt refs (success=null, user fills in)
+        #   camera_<k>.mp4    predicted per-camera 192x320 videos (T = (pred_step-1) * interact_num)
+        episode_dir = f"{args.save_dir}/{args.task_name}/bc_episodes/{args.task_type}_time_{uuid}_traj_{val_id_i}_{start_idx_i}_{text_id}"
+        os.makedirs(episode_dir, exist_ok=True)
+
+        # stack per-camera predicted frames: (3, T, H, W, 3) uint8
+        pred_images = np.stack([np.concatenate(buf, axis=0) for buf in pred_cam_buffers], axis=0)
+        # high-frequency action/state arrays from policy
+        joint_pos_hf = np.concatenate([s['joint_pos'] for s in info_to_save], axis=0)  # (T_hf, 7)
+        joint_vel_hf = np.concatenate([s['joint_vel'] for s in info_to_save], axis=0)  # (T_hf, 7)
+        state_fk_hf  = np.concatenate([s['state_fk']  for s in info_to_save], axis=0)  # (T_hf, 7)
+
+        policy_obs_exterior = np.stack(policy_obs_exterior_buf, axis=0).astype(np.uint8)
+        policy_obs_wrist = np.stack(policy_obs_wrist_buf, axis=0).astype(np.uint8)
+        policy_state_joint = np.stack(policy_state_joint_buf, axis=0).astype(np.float32)
+        policy_state_gripper = np.stack(policy_state_gripper_buf, axis=0).astype(np.float32)
+        policy_action_chunk = np.stack(policy_action_chunk_buf, axis=0).astype(np.float32)
+
+        np.savez_compressed(
+            os.path.join(episode_dir, "episode.npz"),
+            initial_images=initial_images.astype(np.uint8),
+            images=pred_images.astype(np.uint8),
+            initial_state_eef=eef_gt[0].astype(np.float32),
+            initial_state_joints=joint_pos_gt[0].astype(np.float32),
+            joint_pos=joint_pos_hf.astype(np.float32),
+            joint_vel=joint_vel_hf.astype(np.float32),
+            state_fk=state_fk_hf.astype(np.float32),
+            policy_obs_exterior=policy_obs_exterior,
+            policy_obs_wrist=policy_obs_wrist,
+            policy_state_joint=policy_state_joint,
+            policy_state_gripper=policy_state_gripper,
+            policy_action_chunk=policy_action_chunk,
+        )
+
+        # per-camera mp4s for human review (predicted only); use mediapy h264 like the concat
+        camera_view_names = ['exterior_1', 'exterior_2', 'wrist']
+        for c in range(3):
+            mediapy.write_video(os.path.join(episode_dir, f"camera_{c}.mp4"), pred_images[c], fps=4)
+
+        # discover source snapshot path from annotation metadata if present
+        source_snapshot = None
+        source_demo_group = None
+        source_view_keys = None
+        try:
+            with open(f"{Agent.args.val_dataset_dir}/annotation/val/{val_id_i}.json") as f_ann:
+                _ann = json.load(f_ann)
+            _meta = _ann.get('metadata', {})
+            source_snapshot = _meta.get('source_hdf5')
+            source_demo_group = _meta.get('source_demo_group')
+            source_view_keys = _meta.get('source_view_keys')
+        except Exception:
+            pass
+
+        episode_meta = {
+            "episode_id": val_id_i,
+            "instruction": text_i,
+            "success": None,
+            "task_type": args.task_type,
+            "snapshot_dataset_dir": str(Agent.args.val_dataset_dir),
+            "source_snapshot_hdf5": source_snapshot,
+            "source_demo_group": source_demo_group,
+            "source_view_keys": source_view_keys,
+            "ctrl_world_ckpt": str(args.ckpt_path),
+            "policy_type": args.policy_type,
+            "policy_ckpt": str(args.pi_ckpt),
+            "fps": 4,
+            "interact_num": int(interact_num),
+            "pred_step": int(pred_step),
+            "policy_skip_step": int(args.policy_skip_step),
+            "guidance_scale": float(args.guidance_scale),
+            "num_inference_steps": int(args.num_inference_steps),
+            "z_min": float(args.z_min),
+            "gripper_max": float(args.gripper_max),
+            "num_predicted_frames": int(pred_images.shape[1]),
+            "num_action_steps": int(joint_pos_hf.shape[0]),
+            "num_policy_decisions": int(policy_obs_exterior.shape[0]),
+            "policy_action_horizon": int(policy_action_chunk.shape[1]) if policy_action_chunk.ndim == 3 else None,
+            "camera_views": camera_view_names,
+            "frame_resolution": [int(pred_images.shape[2]), int(pred_images.shape[3])],
+            "policy_obs_resolution": [224, 224],
+            "timestamp": uuid,
+            "concat_video_path": filename_video,
+            "info_json_path": filename_info,
+            "sweep_config_path": os.path.join(args.save_dir, "sweep_config.json"),
+            "notes": "success=null; set to true/false after manual review for BC filtering.",
+        }
+        with open(os.path.join(episode_dir, "episode.json"), 'w') as f:
+            json.dump(episode_meta, f, indent=2)
+        print(f"Saving BC bundle to {episode_dir}")
         print("##########################################################################")
 
 
