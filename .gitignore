@@ -15,6 +15,12 @@ data/lerobot/
 # Generated on first Isaac Sim import (source meshes stay in assets/objects/)
 assets/objects/**/*.usd
 .env
+dreambc-*.json
+*.json.bak
+
+# runpod-flash generated artifacts (contain credentials + large build outputs)
+.flash/
+.runpod/
 
 # SmolVLA weights — download at runtime (see README / requirements-smolvla.txt)
 models/smolvla_base/model.safetensors
