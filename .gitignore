@@ -14,6 +14,8 @@ __MACOSX/
 
 # Third-party library (use submodule or separate install instead)
 Ctrl-World/openpi/
+Ctrl-World/openpi
+openpi/
 
 # Python cache
 __pycache__/
@@ -37,3 +39,13 @@ Ctrl-World/dataset_example/tomato_snapshots_v*/
 # Misc launcher artifacts
 nohup.out
 *.npz
+outputs/
+
+# Secrets / credentials (NEVER commit)
+dreambc-*.json
+*.json.bak
+
+# runpod-flash generated artifacts (contain credentials + large build outputs)
+.flash/
+.runpod/
+data/
