@@ -1,0 +1,69 @@
+{
+  "task": "cube",
+  "source": "User chat labels for C16_g5_block on matched eval val_ids.",
+  "val_dataset_dir": "Ctrl-World/dataset_example/cube_snapshots_v3",
+  "guidance_scale": 5,
+  "instruction": "put the orange block in the blue bowl",
+  "labels": [
+    {
+      "val_id": "0002",
+      "raw_label": "success",
+      "strict_success": true,
+      "lax_success": true
+    },
+    {
+      "val_id": "0007",
+      "raw_label": "fail",
+      "strict_success": false,
+      "lax_success": false
+    },
+    {
+      "val_id": "0008",
+      "raw_label": "bad success",
+      "strict_success": false,
+      "lax_success": true
+    },
+    {
+      "val_id": "0009",
+      "raw_label": "success",
+      "strict_success": true,
+      "lax_success": true
+    },
+    {
+      "val_id": "0015",
+      "raw_label": "weird success",
+      "strict_success": false,
+      "lax_success": true
+    },
+    {
+      "val_id": "0016",
+      "raw_label": "fail",
+      "strict_success": false,
+      "lax_success": false
+    },
+    {
+      "val_id": "0018",
+      "raw_label": "passable success (artifact)",
+      "strict_success": false,
+      "lax_success": true
+    },
+    {
+      "val_id": "0041",
+      "raw_label": "success",
+      "strict_success": true,
+      "lax_success": true
+    },
+    {
+      "val_id": "0048",
+      "raw_label": "success",
+      "strict_success": true,
+      "lax_success": true
+    },
+    {
+      "val_id": "0057",
+      "raw_label": "fail",
+      "strict_success": false,
+      "lax_success": false
+    }
+  ]
+}

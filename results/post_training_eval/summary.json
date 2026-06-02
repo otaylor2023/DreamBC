@@ -1,0 +1,101 @@
+{
+  "rollout_root": "/home/ubuntu/DreamBC/rollouts/eval_post_training",
+  "num_episode_rows": 0,
+  "summary": {
+    "cube": {
+      "rows": [
+        {
+          "val_id": "0002",
+          "base": "yes strict / yes lax",
+          "base_label": "success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0007",
+          "base": "no strict / no lax",
+          "base_label": "fail",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0008",
+          "base": "no strict / yes lax",
+          "base_label": "bad success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0009",
+          "base": "yes strict / yes lax",
+          "base_label": "success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0015",
+          "base": "no strict / yes lax",
+          "base_label": "weird success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0016",
+          "base": "no strict / no lax",
+          "base_label": "fail",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0018",
+          "base": "no strict / yes lax",
+          "base_label": "passable success (artifact)",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0041",
+          "base": "yes strict / yes lax",
+          "base_label": "success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0048",
+          "base": "yes strict / yes lax",
+          "base_label": "success",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        },
+        {
+          "val_id": "0057",
+          "base": "no strict / no lax",
+          "base_label": "fail",
+          "base_success": null,
+          "ctrl_world_lora": "TBD",
+          "teleop_lora": "TBD"
+        }
+      ],
+      "totals": {
+        "base_strict": {
+          "success": 4,
+          "labeled": 10
+        },
+        "base_lax": {
+          "success": 7,
+          "labeled": 10
+        }
+      }
+    }
+  },
+  "timing": []
+}
