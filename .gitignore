@@ -1,13 +1,12 @@
 .mamba/
 .codex
 *.pt
+*.log
+nohup.out
 
 # Large binary files and datasets
 vis_comp_high_res.zip
 vis_comp_high_res/
-Ctrl-World/dataset_example/vis_comp/
-Ctrl-World/dataset_example/vis_comp_corrected/
-Ctrl-World/dataset_example/vis_comp_corrected_bright/
 
 # macOS unzip artifact
 __MACOSX/
@@ -22,11 +21,21 @@ __pycache__/
 cube_snapshots.zip
 tomato_snapshots.zip
 .env
-data/snapshots
+data
 
 # Ctrl-World + pi05 sweep outputs (multi-GB per sweep, regenerable)
 rollouts/
 Ctrl-World/rollouts/
+
+# Vendored Ctrl-World assets: do not re-add upstream demo media or model weights.
+# (Existing files committed in history are not removed by this rule; run
+# `git rm -r --cached Ctrl-World/synthetic_traj/ Ctrl-World/checkpoint/ Ctrl-World/dataset/`
+# to drop them from tracking if desired.)
+Ctrl-World/synthetic_traj/
+Ctrl-World/checkpoint/
+Ctrl-World/dataset/
+Ctrl-World/__pycache__/
+Ctrl-World/models/__pycache__/
 
 # Prepared snapshot datasets (regenerate via scripts/prepare_snapshots_for_ctrl_world.py)
 Ctrl-World/dataset_example/cube_snapshots/
@@ -34,6 +43,34 @@ Ctrl-World/dataset_example/cube_snapshots_v*/
 Ctrl-World/dataset_example/tomato_snapshots/
 Ctrl-World/dataset_example/tomato_snapshots_v*/
 
-# Misc launcher artifacts
-nohup.out
+# Run artifacts (regenerable)
+logs/
+wandb/
+.swanlab/
+
+# Misc
 *.npz
+
+# pi05 BC training outputs (checkpoints, logs, wandb)
+training_runs/
+TL_g3_red_ball.zip
+
+# Real-robot checkpoint binaries are huge; track metadata + docs only.
+real_robot_checkpoints/*
+!real_robot_checkpoints/README.md
+!real_robot_checkpoints/MANIFEST.json
+!real_robot_checkpoints/cube/
+!real_robot_checkpoints/tomato/
+real_robot_checkpoints/cube/*
+real_robot_checkpoints/tomato/*
+!real_robot_checkpoints/cube/*/
+!real_robot_checkpoints/tomato/*/
+real_robot_checkpoints/cube/*/*
+real_robot_checkpoints/tomato/*/*
+!real_robot_checkpoints/cube/*/meta.json
+!real_robot_checkpoints/tomato/*/meta.json
+!real_robot_checkpoints/docs/
+!real_robot_checkpoints/docs/**
+
+tomato.zip
+cube.zip

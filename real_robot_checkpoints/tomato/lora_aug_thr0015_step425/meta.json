@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/lora_aug_thr0015_step425",
+  "dest_name": "lora_aug_thr0015_step425",
+  "source_exp": "tomato_t24_lora_v1_aug",
+  "source_step": 425,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": true,
+  "loss_threshold": 0.015,
+  "ema_loss": null,
+  "train_step": 425,
+  "prompt": "Pick the tomato",
+  "recommended_for_robot": false,
+  "rationale": "LoRA late + aug: bracket right side",
+  "eval_train_config": "dreambc_lora"
+}

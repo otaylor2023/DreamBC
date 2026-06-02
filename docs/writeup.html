@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Full report — Ctrl-World SimToReal Policy Generalization</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+</head>
+<body data-active-task="cube">
+  <section class="section pb-0">
+    <div class="container">
+      <p class="nav-top"><a href="index.html">&larr; Project overview</a></p>
+      <h1 class="title is-3">Ctrl-World for Real-Time SimToReal Policy Generalization</h1>
+      <p class="subtitle is-5">Abhijnya Bhat, Wayne Chu, Olivia Taylor — Stanford CS348K</p>
+
+      <div class="tabs is-toggle is-centered task-switcher" id="taskSwitcher">
+        <ul>
+          <li class="is-active" data-task="cube"><a>Cube pickup</a></li>
+          <li data-task="tomato"><a>Tomato pickup</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section pt-0">
+    <div class="container content is-medium">
+
+      <h2 class="title is-4 section-heading">1. Background and Setup</h2>
+      <p>
+        Vision-language-action policies such as <strong>pi0.5</strong> generalize across many manipulation tasks, but performance can become unreliable under new objects, camera viewpoints, lighting, and workspace layouts. Collecting additional human teleoperation for every new task is slow and requires physical robot access.
+      </p>
+      <p>
+        We ask: <em>Can Ctrl-World synthetic rollouts improve pi0.5 real-world performance on tasks where the base policy is partially capable but unreliable?</em>
+      </p>
+      <ul>
+        <li><strong>Inputs:</strong> pretrained pi0.5, Ctrl-World checkpoint, real-Franka snapshot observations, natural-language instruction.</li>
+        <li><strong>Outputs:</strong> task-adapted pi0.5 checkpoint; real-robot success rate and trajectory quality.</li>
+        <li><strong>Crux:</strong> imagined frames must stay visually grounded with the recorded action chunks so behavior cloning does not learn spurious visual-action associations.</li>
+      </ul>
+
+      <div class="task-pane" data-task="cube">
+        <p><strong>Prompt:</strong> put the orange block in the blue bowl</p>
+        <div class="two-up video-panel mb-3">
+          <div><video src="static/videos/real_demo/cube_demo_01.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Real teleop demo</p></div>
+          <div><video src="static/videos/dream_rollout/cube_dream_01.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Ctrl-World imagined</p></div>
+        </div>
+        <figure><img src="static/images/first_frame/cube_first_frame.png" alt="Cube workspace" class="figure-img"><figcaption class="has-text-centered">Starting workspace (cube).</figcaption></figure>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <p><strong>Prompt:</strong> pick the tomato and place it in the blue bowl</p>
+        <div class="two-up video-panel mb-3">
+          <div><video src="static/videos/real_demo/tomato_demo_01.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Real teleop demo</p></div>
+          <div><video src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Ctrl-World imagined</p></div>
+        </div>
+        <figure><img src="static/images/first_frame/tomato_first_frame.png" alt="Tomato workspace" class="figure-img"><figcaption class="has-text-centered">Starting workspace (tomato).</figcaption></figure>
+      </div>
+
+      <h2 class="title is-4 section-heading">2. Approach</h2>
+      <p>We extended an existing pi0.5 + Ctrl-World pipeline to a real Franka lab setup in four stages:</p>
+      <ol>
+        <li><strong>Task selection</strong> — evaluated candidate tasks in sim and on hardware; kept cube and tomato pickup where Ctrl-World produced usable rollouts.</li>
+        <li><strong>Imagined rollouts</strong> — pi0.5 acts in the loop; Ctrl-World predicts multi-camera video; swept prompts, guidance, and camera layouts (<code>scripts/run_sweep.sh</code>).</li>
+        <li><strong>BC bundles</strong> — each policy decision stores exterior + wrist RGB (224&times;224), joint/gripper state, and a 15-step DROID action chunk (<code>scripts/bc_dataset.py</code>).</li>
+        <li><strong>Fine-tuning</strong> — LoRA on pi05_droid with optional image augmentation; EMA-loss thresholds 0.10 / 0.04 / 0.015 for early stopping (<code>scripts/run_with_loss_threshold.py</code>). Full fine-tuning checkpoints exist in the portfolio but were not evaluated on real hardware.</li>
+      </ol>
+      <figure class="has-text-centered">
+        <img src="static/images/pipeline.svg" alt="Pipeline" class="figure-img" style="max-width: 900px;">
+      </figure>
+      <p>
+        <strong>What we started with:</strong> pretrained pi0.5 (OpenPI), Ctrl-World checkpoint, DROID norm stats.
+        <strong>What we added:</strong> rollout orchestration, BC bundle format, threshold-based training, and a 42-checkpoint real-robot portfolio under <code>real_robot_checkpoints/</code>.
+      </p>
+
+      <div class="task-pane" data-task="cube">
+        <div class="two-up mb-3">
+          <figure><img src="static/images/camera_views/cube_exterior.png" alt="Cube exterior" class="figure-img"><figcaption class="has-text-centered">Exterior (exterior_2 / exterior_3)</figcaption></figure>
+          <figure><img src="static/images/camera_views/cube_wrist.png" alt="Cube wrist" class="figure-img"><figcaption class="has-text-centered">Wrist</figcaption></figure>
+        </div>
+        <figure><img src="static/images/training_examples/cube_demo_01_t035.png" alt="Cube training sample" class="figure-img"><figcaption class="has-text-centered">Example BC sample: exterior + wrist at decision time, 15-step action chunk target.</figcaption></figure>
+        <p class="has-text-weight-semibold">Sweep gallery (representative configs)</p>
+        <div class="sweep-grid">
+          <figure><video src="static/videos/dream_sweep/cube/C06_g8_block.mp4" autoplay muted loop playsinline></video><figcaption>C06_g8_block</figcaption></figure>
+          <figure><video src="static/videos/dream_sweep/cube/C16_g5_block.mp4" autoplay muted loop playsinline></video><figcaption>C16_g5_block</figcaption></figure>
+        </div>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <div class="two-up mb-3">
+          <figure><img src="static/images/camera_views/tomato_exterior.png" alt="Tomato exterior" class="figure-img"><figcaption class="has-text-centered">Exterior</figcaption></figure>
+          <figure><img src="static/images/camera_views/tomato_wrist.png" alt="Tomato wrist" class="figure-img"><figcaption class="has-text-centered">Wrist</figcaption></figure>
+        </div>
+        <figure><img src="static/images/training_examples/tomato_demo_01_t032.png" alt="Tomato training sample" class="figure-img"><figcaption class="has-text-centered">Example BC sample at grasp timestep.</figcaption></figure>
+        <div class="sweep-grid">
+          <figure><video src="static/videos/dream_sweep/tomato/TL_g3_red_ball.mp4" autoplay muted loop playsinline></video><figcaption>TL_g3_red_ball</figcaption></figure>
+          <figure><video src="static/videos/dream_sweep/tomato/tomato_t24_lora_v1_aug.mp4" autoplay muted loop playsinline></video><figcaption>tomato_t24_lora_v1_aug</figcaption></figure>
+        </div>
+      </div>
+
+      <h2 class="title is-4 section-heading">3. Evaluation and Results</h2>
+      <h3 class="title is-5">3.1 Definition of success</h3>
+      <ul>
+        <li><strong>Primary:</strong> fraction of real Franka trials with successful pick (and place when applicable).</li>
+        <li><strong>Secondary:</strong> trajectory smoothness, stability, directness (qualitative from rollouts).</li>
+        <li><strong>Data efficiency:</strong> compare synthetic Ctrl-World FT vs teleoperation FT with matched trajectory counts.</li>
+      </ul>
+
+      <h3 class="title is-5">3.2 Experimental setup and baselines</h3>
+      <ol>
+        <li><strong>Base pi0.5</strong> — pretrained checkpoint, no task FT.</li>
+        <li><strong>Ctrl-World finetuned pi0.5</strong> — FT on successful imagined rollouts (16 cube / 24 tomato demos in primary bundles).</li>
+        <li><strong>Teleoperation finetuned pi0.5</strong> — FT on hand-collected trajectories (30 cube / 24 tomato); checkpoints <code>*_hand</code> in portfolio.</li>
+      </ol>
+
+      <h3 class="title is-5">3.3 Main results</h3>
+      <table class="table is-bordered is-striped is-fullwidth">
+        <thead>
+          <tr><th>Task</th><th>Base pi0.5</th><th>Ctrl-World FT</th><th>Teleop FT</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Pick up cube</td><td>90%</td><td>90%</td><td>TBD</td><td>Equal success; smoother trajectories after FT.</td></tr>
+          <tr><td>Pick up tomato</td><td>60%</td><td>100%</td><td>TBD</td><td>Large gain from synthetic FT.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="task-pane" data-task="cube">
+        <img src="static/images/results_bar_cube.svg" alt="Cube results" class="results-bar-img">
+        <p class="has-text-centered has-text-weight-bold">Headline: smoother execution at saturated 90% success.</p>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <img src="static/images/results_bar_tomato.svg" alt="Tomato results" class="results-bar-img">
+        <p class="has-text-centered has-text-weight-bold">Headline: +40 percentage points absolute success.</p>
+      </div>
+
+      <h3 class="title is-5">3.4 Interpretation</h3>
+      <p>
+        Ctrl-World fine-tuning helps most when the base policy is already partially capable but unstable. Cube pickup was near ceiling (90%), so binary success did not move, yet motion quality improved. Tomato pickup had more headroom; synthetic trajectories provided task-specific supervision that transferred to hardware.
+      </p>
+      <div class="task-pane" data-task="cube">
+        <p>Qualitative: finetuned cube policy reaches the same success rate with less jerky approach and retreat.</p>
+        <video src="static/videos/policy_rollout/cube_after_01.mp4" autoplay muted loop playsinline controls class="mb-4"></video>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <p>Qualitative: base policy sometimes misses the grasp; Ctrl-World FT policy completes the pick reliably in our trial set.</p>
+        <video src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline controls class="mb-4"></video>
+      </div>
+
+      <h3 class="title is-5">3.5 Qualitative comparison (three-way)</h3>
+      <div class="task-pane" data-task="cube">
+        <div class="columns compare-row">
+          <div class="column compare-cell"><video src="static/videos/real_demo/cube_demo_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+          <div class="column compare-cell"><video src="static/videos/dream_rollout/cube_dream_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Imagined</p></div>
+          <div class="column compare-cell"><video src="static/videos/policy_rollout/cube_after_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">CW FT policy</p></div>
+        </div>
+        <div class="columns compare-row">
+          <div class="column compare-cell"><video src="static/videos/real_demo/cube_demo_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+          <div class="column compare-cell"><video src="static/videos/dream_rollout/cube_dream_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Imagined</p></div>
+          <div class="column compare-cell"><video src="static/videos/policy_rollout/cube_after_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">CW FT policy</p></div>
+        </div>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <div class="columns compare-row">
+          <div class="column compare-cell"><video src="static/videos/real_demo/tomato_demo_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+          <div class="column compare-cell"><video src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Imagined</p></div>
+          <div class="column compare-cell"><video src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">CW FT policy</p></div>
+        </div>
+        <div class="columns compare-row">
+          <div class="column compare-cell"><video src="static/videos/real_demo/tomato_demo_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+          <div class="column compare-cell"><video src="static/videos/dream_rollout/tomato_dream_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Imagined</p></div>
+          <div class="column compare-cell"><video src="static/videos/policy_rollout/tomato_after_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">CW FT policy</p></div>
+        </div>
+      </div>
+
+      <h3 class="title is-5">3.6 Conclusion</h3>
+      <p>
+        Ctrl-World synthetic rollouts are a viable source of behavior-cloning data for adapting pi0.5 on real manipulation tasks. Effects are largest when the base policy is not already saturated. Careful rollout curation and real-robot evaluation remain essential.
+      </p>
+
+      <h2 class="title is-4 section-heading">4. Failure Cases and Limitations</h2>
+      <p>Some imagined rollouts exhibit object drift, morphing, or prompt inconsistency — corrupting observation-action pairs. With only ~16–24 successful trajectories per task, we used LoRA exclusively to limit overfitting; full fine-tuning was deferred.</p>
+      <ul>
+        <li>Only two manipulation tasks evaluated.</li>
+        <li>Limited number of real robot trials per condition.</li>
+        <li>Successful synthetic rollouts were curated (pipeline not fully automatic).</li>
+        <li>Visual sim-to-real gap between Ctrl-World and the physical scene.</li>
+        <li>Long-horizon tasks not yet tested.</li>
+      </ul>
+      <div class="task-pane" data-task="cube">
+        <div class="two-up video-panel">
+          <div><video src="static/videos/failure_cases/cube_drift.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Artifact: drift</p></div>
+          <div><video src="static/videos/failure_cases/cube_morph.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Artifact: morphing</p></div>
+        </div>
+      </div>
+      <div class="task-pane" data-task="tomato">
+        <div class="two-up video-panel">
+          <div><video src="static/videos/failure_cases/tomato_drift.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Artifact: drift</p></div>
+          <div><video src="static/videos/failure_cases/tomato_morph.mp4" autoplay muted loop playsinline controls></video><p class="has-text-centered is-size-7">Artifact: morphing</p></div>
+        </div>
+      </div>
+
+      <h2 class="title is-4 section-heading">5. Team Responsibilities</h2>
+      <ul>
+        <li><strong>Real robot setup and evaluation</strong></li>
+        <li><strong>Ctrl-World rollout generation and parameter sweep</strong></li>
+        <li><strong>pi0.5 fine-tuning and checkpoint management</strong></li>
+        <li><strong>Teleoperation baseline and result analysis</strong></li>
+      </ul>
+      <p class="is-size-7 has-text-grey"><em>TODO: assign names to roles before final submission.</em></p>
+
+      <h2 class="title is-4 section-heading">6. References</h2>
+      <ul>
+        <li>Ctrl-World — controllable world model for robot manipulation.</li>
+        <li>Physical Intelligence pi0.5 / OpenPI.</li>
+        <li>DROID dataset and action format.</li>
+        <li>LoRA: Low-Rank Adaptation of Large Language Models (Hu et al.).</li>
+      </ul>
+
+    </div>
+  </section>
+
+  <footer class="footer has-text-centered">
+    <p><a href="index.html">Back to overview</a> &middot; <a href="https://github.com/otaylor2023/DreamBC">GitHub</a></p>
+  </footer>
+
+  <script src="static/js/index.js" defer></script>
+</body>
+</html>

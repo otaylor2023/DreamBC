@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/lora_agent_view_noaug_thr0015_step375_bowl",
+  "dest_name": "lora_agent_view_noaug_thr0015_step375_bowl",
+  "source_exp": "tomato_t24_lora_agent_view_noaug",
+  "source_step": 375,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": false,
+  "loss_threshold": 0.015,
+  "ema_loss": 0.013919999999999998,
+  "train_step": 375,
+  "prompt": "pick the tomato and place it in the blue bowl",
+  "recommended_for_robot": true,
+  "rationale": "agent_view exterior (near-converged LoRA, bowl prompt)",
+  "eval_train_config": "dreambc_lora"
+}

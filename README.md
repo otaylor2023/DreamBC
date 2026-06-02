@@ -1,86 +1,104 @@
 # DreamBC
 
-World-model policy improvement pipeline for robot manipulation in simulation and real-robot settings using Ctrl-World imagined rollouts and behavior cloning.
+**Ctrl-World for Real-Time SimToReal Policy Generalization** — Stanford CS348K (Bhat, Chu, Taylor).
 
-## Week 6 Checkpoint
-### Project Questions / Goals
+We use **Ctrl-World** imagined rollouts as behavior-cloning data to adapt **pi0.5** (`pi05_droid`) on real-Franka pick-and-place tasks, reducing reliance on new human teleoperation for every task.
 
-Our project aims to study whether **Ctrl-World can help improve a VLA policy on robot manipulation tasks where the policy initially fails with π0.5**.
+| Resource | Link |
+|----------|------|
+| **Project site** | https://otaylor2023.github.io/DreamBC/ |
+| **Full write-up** | [docs/writeup.html](docs/writeup.html) |
+| **Checkpoints (metadata)** | [real_robot_checkpoints/](real_robot_checkpoints/) |
+| **Curated media** | [assets/](assets/) → built into [docs/static/](docs/static/) |
+| **Results index** | [results/](results/) |
 
-The main questions we want to answer are:
+## Headline results (real Franka)
 
-1. Can we identify tasks where a generally competent VLA policy fails?
-2. Can Ctrl-World-generated imagined trajectories help the policy improve on those failed tasks?
-3. Can the improved policy succeed on the target task without hurting performance on other tasks?
+| Task | Base pi0.5 | Ctrl-World FT | Notes |
+|------|------------|---------------|--------|
+| Pick up cube | 90% | 90% | Smoother trajectories; success saturated |
+| Pick up tomato | 60% | 100% | Large gain from synthetic-rollout FT |
 
-### Evaluation Plan
+Teleoperation-FT baselines and additional rollout videos are documented on the [project site](https://otaylor2023.github.io/DreamBC/writeup.html).
 
-To evaluate our questions, we would like to apply a straightforward approach including the evaluation of the VLA policy before and after making improvements.
+## Pipeline (short)
 
-Specifically, the plan includes the following experiments:
+1. **Snapshots** — real Franka HDF5 / single-frame starts.
+2. **Imagined rollouts** — pi0.5 acts in the loop; Ctrl-World predicts multi-camera video (`Ctrl-World/scripts/rollout_interact_pi.py`, `scripts/run_sweep.sh`).
+3. **BC bundles** — `(exterior, wrist, joint, gripper) → 15-step action chunk` per policy decision (`scripts/bc_dataset.py`).
+4. **Fine-tune** — LoRA (image-aug optional) with EMA-loss threshold early stop (`scripts/train_dreambc.py`, `scripts/run_with_loss_threshold.py`). Full-FT checkpoints exist in the portfolio but were **not real-robot evaluated**.
+5. **Deploy** — 42 packaged checkpoints under `real_robot_checkpoints/` (weights gitignored; `meta.json` tracked).
 
-1. Evaluate the VLA policy in several Franka manipulation tasks.
-2. Find two to three tasks that fail or show poor results.
-3. Generate the imaginary rollout trajectories for these tasks.
-4. Choose the successful trajectories.
-5. Improve the policy based on these data.
-6. Re-run the test.
+## Repo layout
 
-We will consider the project successful if the policy improves from failure to success on at least one target task, or if the success rate clearly increases after using Ctrl-World-generated trajectories.
-
-## Current Progress
-
-So far, we have collected **5 trajectories for 5 different manipulation tasks** using the real Franka robot. For every task, we saved the **task prompt**, **robot actions**, and **video recording**.
-
-Originally, we planned to test **π0.5** directly in PyBullet, but we were not able to run π0.5 successfully in it. Therefore, we shifted our current focus to **real-world task data collection on the Franka arm**.
-
-The simulation code is on `wayne` branch. 
-
----
-
-## Overview
-
-DreamBC focuses on generating synthetic robot trajectories in imagination and using them to improve policy performance for both sim and real robots with minimal real-world interaction.
-
-Current repo status:
-- Uses Ctrl-World rollout pipelines and checkpoints.
-- Includes Panda + Robotiq URDF assets under `urdf_models/`.
-- Includes an Isaac Sim preview script for quickly visualizing gripper variants (Franka hand vs Robotiq 2F-85).
-
-## Project Structure
-
-- `urdf_models/` - robot URDFs and meshes (Panda + Robotiq variants).
-- `isaacsim_dual_robot_preview.py` - Isaac Sim script to preview robots side-by-side.
-- `requirements.txt` - lightweight Python requirements for local tooling.
-
-## Quick Start
-
-### 1) Create and activate environment
-
-```bash
-conda create -n dreambc_arm python=3.11 -y
-conda activate dreambc_arm
-pip install -r requirements.txt
+```
+DreamBC/
+  docs/                    # GitHub Pages site (index + writeup)
+  scripts/                 # training, sweep, portfolio, site media helpers
+  real_robot_checkpoints/  # portfolio README, MANIFEST, meta.json, docs/ (weights ignored)
+  vendor_overrides/        # our patches to upstream third-party repos
+    Ctrl-World/            #   files to overlay on a fresh Ctrl-World clone
+  success_lists/           # curated demo IDs
+  assets/                  # where to put source media before build_site_videos.py
+  results/                 # pointer to evaluation artifacts
+  urdf_models/             # Panda + Robotiq assets
 ```
 
-### 2) Preview robots in Isaac Sim
+`Ctrl-World/` is **not** committed to this repo — clone it yourself (see below).
+Other large artifacts are gitignored: `rollouts/`, `training_runs/`, checkpoint `params/`, `cube.zip`, `tomato.zip`.
 
-Run this from Isaac Sim's Python launcher:
+## Quick commands
 
 ```bash
-./python.sh isaacsim_dual_robot_preview.py --gripper both
+# Fine-tune on a BC bundle root (LoRA)
+./scripts/run_train_lora.sh rollouts/C16_g5_block my_exp --enable-image-aug
+
+# Threshold-based train + early stop
+python scripts/run_with_loss_threshold.py \
+  --variant lora --bundles-root rollouts/handcollected_tomato \
+  --exp-name handcollected_tomato_lora_aug --enable-image-aug \
+  --thresholds 0.10,0.04 --num-train-steps 400 --log-file logs/hand.log
+
+# Eval a packaged checkpoint in sim rollout
+./scripts/eval_dreambc_rollout.sh \
+  real_robot_checkpoints/tomato/lora_aug_thr004_step200_hand_bowl lora \
+  rollouts/eval/smoke_tomato
+
+# Build / refresh GitHub Pages videos (~17 MB under docs/static/videos/)
+python3 scripts/build_site_videos.py --copy-images
+
+# Pre-push size check (no commit)
+python3 scripts/check_repo_ready.py
 ```
 
-Options:
-- `--gripper franka`
-- `--gripper robotiq`
-- `--gripper both`
-- `--headless`
+## Enable GitHub Pages
 
-## Notes
+**Settings → Pages → Deploy from branch → `main` → `/docs`** → https://otaylor2023.github.io/DreamBC/
 
-- This repo is currently set up for Isaac Sim workflows.
-- For large-scale world-model inference, use a Linux GPU instance with sufficient VRAM.
+See [docs/README.md](docs/README.md) for media curation details.
+
+## Note on `Ctrl-World/` (upstream code)
+
+`Ctrl-World/` is the upstream [Ctrl-World](https://github.com/Robotic-AI-Lab/Ctrl-World) world-model codebase. It was briefly vendored into this repo but has since been **removed from version control** (the entire `Ctrl-World/` directory is gitignored). The handful of files DreamBC needs to modify on top of upstream live in [`vendor_overrides/Ctrl-World/`](vendor_overrides/Ctrl-World/), which mirrors the upstream layout so they can be copied in directly.
+
+Files we override (full details in [`vendor_overrides/Ctrl-World/README.md`](vendor_overrides/Ctrl-World/README.md)):
+
+- `scripts/rollout_interact_pi.py` — DreamBC LoRA/full pi0.5 checkpoint loading + per-decision BC bundle outputs (`policy_obs_*`, `policy_state_*`, `policy_action_chunk`).
+- `scripts/rollout_replay_traj.py`, `scripts/rollout_key_board.py` — extra CLI flags so the rollouts can be driven from sweep shell scripts.
+- `config.py` — bumps `wm_args.guidance_scale` from `1.0` to `7.5` (the value all our checkpoints and result tables were produced with).
+
+To run the DreamBC pipeline, follow the "Setup on a fresh Linux GPU instance" section below, which clones upstream Ctrl-World and then overlays `vendor_overrides/Ctrl-World/` on top.
+
+## Citation
+
+```bibtex
+@misc{dreambc2026,
+  title={Ctrl-World for Real-Time SimToReal Policy Generalization},
+  author={Bhat, Abhijnya and Chu, Wayne and Taylor, Olivia},
+  year={2026},
+  howpublished={\url{https://otaylor2023.github.io/DreamBC/}}
+}
+```
 
 ---
 
@@ -93,8 +111,9 @@ writes a BC-ready bundle (raw frames + policy-aligned `(obs, action_chunk)` pair
 
 ### Setup on a fresh Linux GPU instance (H100 / A100 80GB recommended)
 
-The repo intentionally does not commit large assets (`Ctrl-World/openpi/`, model
-checkpoints, raw snapshot HDF5s, rollout outputs). Fetch them out-of-band:
+The repo intentionally does not commit large assets (`Ctrl-World/` itself,
+`Ctrl-World/openpi/`, model checkpoints, raw snapshot HDF5s, rollout outputs).
+Fetch them out-of-band:
 
 1) Clone this repo:
    ```bash
@@ -102,7 +121,15 @@ checkpoints, raw snapshot HDF5s, rollout outputs). Fetch them out-of-band:
    cd DreamBC
    ```
 
-2) Install openpi inside `Ctrl-World/` (gitignored on purpose):
+2) Clone upstream Ctrl-World and apply our overrides:
+   ```bash
+   git clone git@github.com:Robotic-AI-Lab/Ctrl-World.git Ctrl-World
+   # overlay our patched files (rollout_interact_pi.py, rollout_replay_traj.py,
+   # rollout_key_board.py, config.py); see vendor_overrides/Ctrl-World/README.md
+   rsync -a vendor_overrides/Ctrl-World/ Ctrl-World/
+   ```
+
+3) Install openpi inside `Ctrl-World/`:
    ```bash
    cd Ctrl-World
    git clone --recurse-submodules git@github.com:Physical-Intelligence/openpi.git
@@ -113,7 +140,7 @@ checkpoints, raw snapshot HDF5s, rollout outputs). Fetch them out-of-band:
    cd ../..
    ```
 
-3) Download model checkpoints:
+4) Download model checkpoints:
    - Ctrl-World ckpt -> `Ctrl-World/checkpoint/checkpoint-10000.pt` (see the table in
      `Ctrl-World/readme.md`).
    - pi05_droid ckpt: follow openpi instructions; symlink or copy to
@@ -121,14 +148,14 @@ checkpoints, raw snapshot HDF5s, rollout outputs). Fetch them out-of-band:
    - SVD + CLIP: HuggingFace will auto-cache on first use; required snapshot hashes
      are referenced in `scripts/run_sweep.sh` (`SVD_PATH`, `CLIP_PATH`).
 
-4) Place raw snapshot HDF5s under:
+5) Place raw snapshot HDF5s under:
    ```
    data/snapshots/cube_snapshots/snapshot_*.hdf5
    data/snapshots/tomato_snapshots/snapshot_*.hdf5
    ```
    (transferred via scp / S3 / `cube_snapshots.zip` and `tomato_snapshots.zip`)
 
-5) Build the Ctrl-World-format datasets used by the sweep configs:
+6) Build the Ctrl-World-format datasets used by the sweep configs:
    ```bash
    source Ctrl-World/openpi/.venv/bin/activate
 

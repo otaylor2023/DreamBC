@@ -1,0 +1,130 @@
+body {
+  font-family: "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.hero-body {
+  padding: 3rem 1.5rem;
+}
+
+.publication-title {
+  font-family: "Google Sans", "Noto Sans", sans-serif;
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.publication-authors {
+  font-family: "Google Sans", "Noto Sans", sans-serif;
+  font-size: 1.15rem;
+}
+
+.publication-authors a {
+  color: hsl(204, 86%, 53%);
+}
+
+.section-heading {
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.headline-card {
+  border-left: 4px solid hsl(204, 86%, 53%);
+  padding: 1rem 1.25rem;
+  background: #f5f5f5;
+  margin: 1.5rem 0;
+}
+
+.headline-card .big-stat {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.video-panel video,
+.compare-cell video,
+.sweep-grid video {
+  width: 100%;
+  border-radius: 4px;
+  background: #111;
+}
+
+.compare-row {
+  margin-bottom: 1.5rem;
+}
+
+.compare-cell p {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.task-switcher {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 0.75rem 0 0.5rem;
+  border-bottom: 1px solid #dbdbdb;
+  margin-bottom: 1.5rem;
+}
+
+body[data-active-task="cube"] .task-pane[data-task="tomato"],
+body[data-active-task="tomato"] .task-pane[data-task="cube"] {
+  display: none;
+}
+
+.sweep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.sweep-grid figcaption {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  color: #4a4a4a;
+}
+
+.figure-img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.two-up {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media screen and (max-width: 768px) {
+  .two-up {
+    grid-template-columns: 1fr;
+  }
+  .publication-title {
+    font-size: 2rem;
+  }
+}
+
+.bibtex {
+  font-family: monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.footer {
+  padding: 2rem 1.5rem 3rem;
+  font-size: 0.9rem;
+  color: #4a4a4a;
+}
+
+.nav-top {
+  margin-bottom: 1rem;
+}
+
+.results-bar-img {
+  max-width: 480px;
+  margin: 1rem auto;
+  display: block;
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ctrl-World for Real-Time SimToReal Policy Generalization</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <meta name="description" content="DreamBC: Ctrl-World imagined rollouts for pi0.5 fine-tuning on real-robot manipulation.">
+</head>
+<body>
+  <section class="hero is-light">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <h1 class="publication-title">Ctrl-World for Real-Time SimToReal Policy Generalization</h1>
+        <p class="publication-authors is-size-5">
+          <a href="mailto:abhijnya@stanford.edu">Abhijnya Bhat</a>,
+          <a href="mailto:waynechu@stanford.edu">Wayne Chu</a>,
+          <a href="mailto:otaylor@stanford.edu">Olivia Taylor</a>
+          <br><span class="is-size-6">Stanford CS348K</span>
+        </p>
+        <div class="buttons is-centered mt-4">
+          <a class="button is-dark" href="https://github.com/otaylor2023/DreamBC"><span class="icon"><i class="fab fa-github"></i></span><span>Code</span></a>
+          <a class="button is-link is-light" href="writeup.html"><span class="icon"><i class="fas fa-book"></i></span><span>Full writeup</span></a>
+          <a class="button is-link is-light" href="https://github.com/otaylor2023/DreamBC/tree/main/real_robot_checkpoints"><span class="icon"><i class="fas fa-database"></i></span><span>Checkpoints</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section pt-4">
+    <div class="container">
+      <h2 class="title is-4 has-text-centered">Teaser</h2>
+      <div class="columns is-centered">
+        <div class="column is-6">
+          <p class="has-text-centered mb-2"><strong>Ctrl-World imagined</strong> (tomato)</p>
+          <video src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline controls></video>
+        </div>
+        <div class="column is-6">
+          <p class="has-text-centered mb-2"><strong>Finetuned policy</strong> (placeholder)</p>
+          <video src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline controls></video>
+        </div>
+      </div>
+
+      <div class="headline-card has-text-centered">
+        <p class="big-stat">Tomato pickup: 60% &rarr; 100% success</p>
+        <p class="mt-2">with Ctrl-World synthetic-rollout fine-tuning (base pi0.5 &rarr; DreamBC). Cube stays at 90% but trajectories become smoother.</p>
+      </div>
+
+      <h2 class="title is-4 section-heading">Abstract</h2>
+      <p>
+        Generalist vision-language-action policies like <strong>pi0.5</strong> often degrade on new real-world setups.
+        We study whether <strong>Ctrl-World</strong> imagined trajectories can replace expensive teleoperation for task-specific adaptation.
+        Starting from real Franka snapshots and language instructions, pi0.5 acts inside the world model; successful rollouts become behavior-cloning data for LoRA fine-tuning.
+        On real-robot evaluation, tomato pickup improves from <strong>60% to 100%</strong> success; cube pickup remains at <strong>90%</strong> with qualitatively smoother motion.
+      </p>
+
+      <h2 class="title is-4 section-heading has-text-centered">Pipeline</h2>
+      <figure class="has-text-centered">
+        <img src="static/images/pipeline.svg" alt="DreamBC pipeline" class="figure-img" style="max-width: 900px;">
+      </figure>
+
+      <h2 class="title is-4 section-heading has-text-centered">Trajectory comparison</h2>
+      <p class="has-text-centered mb-4">Real teleop demo &rarr; Ctrl-World imagined rollout &rarr; finetuned policy on robot (upload finetuned clips to <code>docs/static/videos/policy_rollout/</code>).</p>
+
+      <p class="has-text-weight-bold">Cube — put the orange block in the blue bowl</p>
+      <div class="columns compare-row">
+        <div class="column compare-cell"><video src="static/videos/real_demo/cube_demo_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+        <div class="column compare-cell"><video src="static/videos/dream_rollout/cube_dream_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World imagined</p></div>
+        <div class="column compare-cell"><video src="static/videos/policy_rollout/cube_after_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World FT policy</p></div>
+      </div>
+      <div class="columns compare-row">
+        <div class="column compare-cell"><video src="static/videos/real_demo/cube_demo_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+        <div class="column compare-cell"><video src="static/videos/dream_rollout/cube_dream_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World imagined</p></div>
+        <div class="column compare-cell"><video src="static/videos/policy_rollout/cube_after_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World FT policy</p></div>
+      </div>
+
+      <p class="has-text-weight-bold mt-5">Tomato — pick the tomato and place it in the blue bowl</p>
+      <div class="columns compare-row">
+        <div class="column compare-cell"><video src="static/videos/real_demo/tomato_demo_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+        <div class="column compare-cell"><video src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World imagined</p></div>
+        <div class="column compare-cell"><video src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World FT policy</p></div>
+      </div>
+      <div class="columns compare-row">
+        <div class="column compare-cell"><video src="static/videos/real_demo/tomato_demo_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Real demo</p></div>
+        <div class="column compare-cell"><video src="static/videos/dream_rollout/tomato_dream_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World imagined</p></div>
+        <div class="column compare-cell"><video src="static/videos/policy_rollout/tomato_after_02.mp4" autoplay muted loop playsinline></video><p class="has-text-centered">Ctrl-World FT policy</p></div>
+      </div>
+
+      <div class="has-text-centered mt-6">
+        <a class="button is-link is-medium" href="writeup.html">Read the full report &rarr;</a>
+      </div>
+
+      <h2 class="title is-4 section-heading">BibTeX</h2>
+      <pre class="bibtex">@misc{dreambc2026,
+  title={Ctrl-World for Real-Time SimToReal Policy Generalization},
+  author={Bhat, Abhijnya and Chu, Wayne and Taylor, Olivia},
+  year={2026},
+  howpublished={\url{https://otaylor2023.github.io/DreamBC/}}
+}</pre>
+    </div>
+  </section>
+
+  <footer class="footer has-text-centered">
+    <p>Template adapted from the <a href="https://nerfies.github.io/">Nerfies</a> academic project page.</p>
+    <p><a href="https://github.com/otaylor2023/DreamBC">DreamBC</a> &middot; Stanford CS348K</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/js/bulma-carousel.min.js" defer></script>
+  <script src="static/js/index.js" defer></script>
+</body>
+</html>

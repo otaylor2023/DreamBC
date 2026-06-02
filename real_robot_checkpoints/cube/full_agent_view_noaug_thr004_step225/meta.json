@@ -1,0 +1,17 @@
+{
+  "task": "cube",
+  "path": "real_robot_checkpoints/cube/full_agent_view_noaug_thr004_step225",
+  "dest_name": "full_agent_view_noaug_thr004_step225",
+  "source_exp": "cube_c16_full_agent_view_noaug",
+  "source_step": 225,
+  "method": "full",
+  "variant": "full",
+  "augmentation": false,
+  "loss_threshold": 0.04,
+  "ema_loss": 0.0397,
+  "train_step": 225,
+  "prompt": "put the orange block in the blue bowl",
+  "recommended_for_robot": true,
+  "rationale": "agent_view exterior (full FT sweet spot)",
+  "eval_train_config": "dreambc_full"
+}

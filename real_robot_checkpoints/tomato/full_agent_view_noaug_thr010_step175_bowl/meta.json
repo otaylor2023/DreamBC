@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/full_agent_view_noaug_thr010_step175_bowl",
+  "dest_name": "full_agent_view_noaug_thr010_step175_bowl",
+  "source_exp": "tomato_t24_full_agent_view_noaug",
+  "source_step": 175,
+  "method": "full",
+  "variant": "full",
+  "augmentation": false,
+  "loss_threshold": 0.1,
+  "ema_loss": 0.06731999999999999,
+  "train_step": 175,
+  "prompt": "pick the tomato and place it in the blue bowl",
+  "recommended_for_robot": false,
+  "rationale": "agent_view exterior (full FT, bowl prompt, thr=0.10)",
+  "eval_train_config": "dreambc_full"
+}
