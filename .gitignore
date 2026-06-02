@@ -13,6 +13,8 @@ __MACOSX/
 
 # Third-party library (use submodule or separate install instead)
 Ctrl-World/openpi/
+Ctrl-World/openpi
+openpi/
 
 # Python cache
 __pycache__/
