@@ -40,12 +40,64 @@ body {
   font-weight: 700;
 }
 
-.video-panel video,
-.compare-cell video,
-.sweep-grid video {
+.example-cell .cell-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.media-stack {
+  position: relative;
   width: 100%;
-  border-radius: 4px;
+  aspect-ratio: 16 / 9;
   background: #111;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.media-stack > video,
+.media-stack > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #111;
+}
+
+.media-stack > [data-ex][hidden] {
+  display: none !important;
+}
+
+.example-selector {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.example-selector button {
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  background: #fff;
+  color: #363636;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.example-selector button:hover {
+  border-color: hsl(204, 86%, 53%);
+  color: hsl(204, 86%, 53%);
+}
+
+.example-selector button.is-active {
+  background: hsl(204, 86%, 53%);
+  border-color: hsl(204, 86%, 53%);
+  color: #fff;
 }
 
 .compare-row {
@@ -57,19 +109,22 @@ body {
   font-size: 0.9rem;
 }
 
-.task-switcher {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: rgba(255, 255, 255, 0.97);
-  padding: 0.75rem 0 0.5rem;
-  border-bottom: 1px solid #dbdbdb;
-  margin-bottom: 1.5rem;
+.task-group {
+  margin: 1.25rem 0 2rem;
 }
 
-body[data-active-task="cube"] .task-pane[data-task="tomato"],
-body[data-active-task="tomato"] .task-pane[data-task="cube"] {
+.task-switcher-local {
+  margin-bottom: 1rem;
+}
+
+.task-group[data-active-task="cube"] .task-pane[data-task="tomato"],
+.task-group[data-active-task="tomato"] .task-pane[data-task="cube"] {
   display: none;
+}
+
+.two-up figure,
+.sweep-grid figure {
+  margin: 0;
 }
 
 .sweep-grid {
@@ -93,6 +148,7 @@ body[data-active-task="tomato"] .task-pane[data-task="cube"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  align-items: start;
 }
 
 @media screen and (max-width: 768px) {

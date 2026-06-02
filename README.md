@@ -1,6 +1,6 @@
 # DreamBC
 
-**Ctrl-World for Real-Time SimToReal Policy Generalization** — Stanford CS348K (Bhat, Chu, Taylor).
+**DreamBC: World Models for Robot Policy Improvement via Imagined Rollouts** — Stanford CS348K (Bhat, Chu, Taylor).
 
 We use **Ctrl-World** imagined rollouts as behavior-cloning data to adapt **pi0.5** (`pi05_droid`) on real-Franka pick-and-place tasks, reducing reliance on new human teleoperation for every task.
 
@@ -93,7 +93,7 @@ To run the DreamBC pipeline, follow the "Setup on a fresh Linux GPU instance" se
 
 ```bibtex
 @misc{dreambc2026,
-  title={Ctrl-World for Real-Time SimToReal Policy Generalization},
+  title={DreamBC: World Models for Robot Policy Improvement via Imagined Rollouts},
   author={Bhat, Abhijnya and Chu, Wayne and Taylor, Olivia},
   year={2026},
   howpublished={\url{https://otaylor2023.github.io/DreamBC/}}
