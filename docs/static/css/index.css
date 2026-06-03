@@ -55,6 +55,22 @@ body {
   overflow: hidden;
 }
 
+.media-stack.media-3panel {
+  aspect-ratio: 3 / 1;
+}
+
+.media-stack.media-2panel {
+  aspect-ratio: 2 / 1;
+}
+
+.media-stack.media-square {
+  aspect-ratio: 1 / 1;
+}
+
+.media-stack.media-5panel {
+  aspect-ratio: 5 / 1;
+}
+
 .media-stack > video,
 .media-stack > img {
   position: absolute;
@@ -69,35 +85,277 @@ body {
   display: none !important;
 }
 
+.media-stack > [hidden] {
+  display: none !important;
+}
+
 .example-selector {
   display: flex;
   justify-content: center;
-  gap: 0.35rem;
-  margin-top: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
   flex-wrap: wrap;
 }
 
-.example-selector button {
+.example-selector button,
+.example-selector > button {
   font-family: inherit;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35rem 0.75rem;
   border: 1px solid #dbdbdb;
-  border-radius: 4px;
+  border-radius: 9999px;
   background: #fff;
   color: #363636;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .example-selector button:hover {
   border-color: hsl(204, 86%, 53%);
   color: hsl(204, 86%, 53%);
+  background: #f5fbff;
+}
+
+.example-selector button:focus-visible {
+  outline: 2px solid hsl(204, 86%, 53%);
+  outline-offset: 2px;
 }
 
 .example-selector button.is-active {
   background: hsl(204, 86%, 53%);
   border-color: hsl(204, 86%, 53%);
   color: #fff;
+  box-shadow: 0 1px 4px rgba(32, 156, 238, 0.35);
+}
+
+.example-selector + .example-selector {
+  margin-top: 0.35rem;
+}
+
+.task-only-group,
+.outcome-only-group {
+  margin-bottom: 2rem;
+}
+
+.task-only-group > .example-selector,
+.outcome-only-group > .example-selector {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.intro-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.intro-flow-large {
+  max-width: 1100px;
+  margin: 0 auto 1.5rem;
+  gap: 1.25rem;
+}
+
+.hero-flow {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.hero-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-arrow {
+  flex: 0 0 auto;
+  align-self: center;
+  /* The column also contains the title label at the top, so plain centering
+     sits slightly high; nudge down to the vertical middle of the videos. */
+  margin-top: 4.55rem;
+  font-size: 2rem;
+  color: #555;
+  line-height: 1;
+}
+
+.hero-label {
+  min-height: 4rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.95rem;
+  padding-top: 1.9rem;
+}
+
+.hero-rollout-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.hero-real-media {
+  flex: 1 1 auto;
+  aspect-ratio: auto;
+  min-height: 0;
+}
+
+.hero-real-media > video,
+.hero-real-media > img {
+  object-fit: cover;
+}
+
+.intro-item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.intro-item .media-stack {
+  background: transparent;
+}
+
+.intro-arrow {
+  flex: 0 0 auto;
+  font-size: 1.6rem;
+  color: #555;
+  line-height: 1;
+}
+
+.sample-row {
+  margin-bottom: 1.25rem;
+}
+
+.sample-gallery {
+  margin-bottom: 2rem;
+}
+
+.sample-gallery > .example-selector {
+  margin-top: 0;
+}
+
+.sample-gallery > .outcome-color-switch {
+  margin-top: 0.45rem;
+  margin-bottom: 1.15rem;
+}
+
+.sample-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(960px, 100%);
+  margin: 0 auto 1.5rem;
+}
+
+.sample-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 0.45rem;
+}
+
+.sample-switch .sample-label {
+  font-size: 1.15rem;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.sample-gallery .sample-label {
+  width: min(960px, 100%);
+  margin: 0 auto 0.45rem;
+  font-size: 1.15rem;
+}
+
+.task-color-switch button {
+  font-size: 1rem;
+  padding: 0.5rem 1.4rem;
+}
+
+.task-color-switch button[data-value="cube"].is-active {
+  background: #ea4f24;
+  border-color: #ea4f24;
+  box-shadow: 0 1px 4px rgba(196, 107, 83, 0.4);
+}
+
+.task-color-switch button[data-value="tomato"].is-active {
+  background: #d64545;
+  border-color: #d64545;
+  box-shadow: 0 1px 4px rgba(214, 69, 69, 0.4);
+}
+
+.task-switcher-local li[data-task="cube"].is-active a,
+.example-selector button[data-ex="1"].is-active {
+  background: #ea4f24;
+  border-color: #ea4f24;
+  color: #fff;
+}
+
+.task-switcher-local li[data-task="tomato"].is-active a,
+.example-selector button[data-ex="2"].is-active {
+  background: #d64545;
+  border-color: #d64545;
+  color: #fff;
+}
+
+.outcome-color-switch {
+  gap: 0;
+}
+
+.outcome-color-switch button {
+  font-size: 0.92rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0;
+  border-left-width: 0;
+  box-shadow: none;
+}
+
+.outcome-color-switch button:first-child {
+  border-left-width: 1px;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.outcome-color-switch button:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.outcome-color-switch button.is-active {
+  box-shadow: none;
+}
+
+.outcome-color-switch button[data-value="success"].is-active {
+  background: #1f9d55;
+  border-color: #1f9d55;
+}
+
+.outcome-color-switch button[data-value="artifact"].is-active {
+  background: #c79100;
+  border-color: #c79100;
+}
+
+.outcome-color-switch button[data-value="fail"].is-active {
+  background: #d64545;
+  border-color: #d64545;
+}
+
+.sample-success {
+  color: #1f9d55;
+}
+
+.sample-artifact {
+  color: #c79100;
+}
+
+.sample-fail {
+  color: #d64545;
 }
 
 .compare-row {
@@ -149,6 +407,95 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   align-items: start;
+}
+
+.report-hero-videos {
+  margin-top: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+.interpretation-panel {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Wider panel for the imagined-vs-teleop 5:1 clips so they read larger. */
+.interpretation-panel-wide {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.interpretation-copy {
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-gap {
+  height: 1.35rem;
+}
+
+.section-gap-sm {
+  height: 0.75rem;
+}
+
+/* Enlarged failure-case artifact clips. */
+.failure-panel-wide {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Stand-alone figure sized to match one panel of a .two-up row above it. */
+.fig-single-panel {
+  max-width: calc(50% - 0.5rem);
+  margin: 0.75rem auto;
+}
+
+/* Collapsible per-trajectory table under each task's summary. */
+.details-table {
+  margin: 0.5rem 0 1.25rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.details-table > summary {
+  cursor: pointer;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #363636;
+  list-style: none;
+}
+
+.details-table > summary::-webkit-details-marker { display: none; }
+
+.details-table > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  margin-right: 0.25rem;
+  transition: transform 0.15s ease;
+}
+
+.details-table[open] > summary::before {
+  content: "▾ ";
+}
+
+.details-table > summary:hover {
+  color: hsl(204, 86%, 53%);
+}
+
+.details-table > .table-container {
+  padding: 0 0.9rem 0.9rem;
+}
+
+@media screen and (max-width: 768px) {
+  .fig-single-panel {
+    max-width: 100%;
+  }
 }
 
 @media screen and (max-width: 768px) {

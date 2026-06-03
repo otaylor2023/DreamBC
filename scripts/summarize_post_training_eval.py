@@ -14,6 +14,8 @@ DEFAULT_ROLLOUT_ROOT = REPO / "rollouts" / "eval_post_training"
 DEFAULT_RESULTS_ROOT = REPO / "results" / "post_training_eval"
 
 CONFIG_COLUMNS = {
+    "cube_base_pi05_baseline_g3": "base_g3_baseline",
+    "cube_base_pi05_baseline_g5": "base_g5_baseline",
     "cube_ctrl_world_lora_g5": "ctrl_world_lora",
     "cube_teleop_lora_g5": "teleop_lora",
     "tomato_base_pi05_bowl_g3": "base",
@@ -112,6 +114,12 @@ def _build_table(rows: list[dict], cube_before: dict[str, dict]) -> dict:
                     if value is not None:
                         totals[key]["labeled"] += 1
                         totals[key]["success"] += int(bool(value))
+                for col_key in ("base_g3_baseline", "base_g5_baseline"):
+                    row_entry = cells.get(col_key)
+                    val = None if row_entry is None else row_entry.get("success")
+                    if val is not None:
+                        totals[col_key]["labeled"] += 1
+                        totals[col_key]["success"] += int(bool(val))
             else:
                 base_row = cells.get("base")
                 base_value = None if base_row is None else base_row.get("success")
@@ -130,16 +138,19 @@ def _build_table(rows: list[dict], cube_before: dict[str, dict]) -> dict:
                     totals[key]["labeled"] += 1
                     totals[key]["success"] += int(bool(value))
 
-            task_rows.append(
-                {
-                    "val_id": val_id,
-                    "base": base_display,
-                    "base_label": cells.get("base_label"),
-                    "base_success": base_value,
-                    "ctrl_world_lora": _fmt_bool(ctrl_value),
-                    "teleop_lora": _fmt_bool(teleop_value),
-                }
-            )
+            row_entry = {
+                "val_id": val_id,
+                "base": base_display,
+                "base_label": cells.get("base_label"),
+                "base_success": base_value,
+                "ctrl_world_lora": _fmt_bool(ctrl_value),
+                "teleop_lora": _fmt_bool(teleop_value),
+            }
+            if task == "cube":
+                for col_key in ("base_g3_baseline", "base_g5_baseline"):
+                    cell = cells.get(col_key)
+                    row_entry[col_key] = _fmt_bool(None if cell is None else cell.get("success"))
+            task_rows.append(row_entry)
 
         summary[task] = {"rows": task_rows, "totals": dict(totals)}
     return summary
@@ -169,26 +180,40 @@ def _write_summary_md(summary: dict, out_path: Path) -> None:
             lines.append(
                 f"Totals: base strict {_count_text(totals, 'base_strict')}; "
                 f"base lax {_count_text(totals, 'base_lax')}; "
+                f"base g3 baseline {_count_text(totals, 'base_g3_baseline')}; "
+                f"base g5 baseline {_count_text(totals, 'base_g5_baseline')}; "
                 f"Ctrl-World LoRA {_count_text(totals, 'ctrl_world_lora')}; "
                 f"teleop LoRA {_count_text(totals, 'teleop_lora')}."
             )
+            lines.extend(
+                [
+                    "",
+                    "| val_id | base (chat: strict/lax) | base g3 baseline | base g5 baseline | Ctrl-World LoRA | teleop LoRA |",
+                    "| --- | --- | --- | --- | --- | --- |",
+                ]
+            )
+            for row in task_summary["rows"]:
+                lines.append(
+                    f"| {row['val_id']} | {row['base']} | {row.get('base_g3_baseline','TBD')} | "
+                    f"{row.get('base_g5_baseline','TBD')} | {row['ctrl_world_lora']} | {row['teleop_lora']} |"
+                )
         else:
             lines.append(
                 f"Totals: base {_count_text(totals, 'base')}; "
                 f"Ctrl-World LoRA {_count_text(totals, 'ctrl_world_lora')}; "
                 f"teleop LoRA {_count_text(totals, 'teleop_lora')}."
             )
-        lines.extend(
-            [
-                "",
-                "| val_id | base | Ctrl-World LoRA | teleop LoRA |",
-                "| --- | --- | --- | --- |",
-            ]
-        )
-        for row in task_summary["rows"]:
-            lines.append(
-                f"| {row['val_id']} | {row['base']} | {row['ctrl_world_lora']} | {row['teleop_lora']} |"
+            lines.extend(
+                [
+                    "",
+                    "| val_id | base | Ctrl-World LoRA | teleop LoRA |",
+                    "| --- | --- | --- | --- |",
+                ]
             )
+            for row in task_summary["rows"]:
+                lines.append(
+                    f"| {row['val_id']} | {row['base']} | {row['ctrl_world_lora']} | {row['teleop_lora']} |"
+                )
         lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n")

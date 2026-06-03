@@ -32,24 +32,62 @@
 
   <section class="section pt-4">
     <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-6">
-          <p class="has-text-centered mb-2"><strong>Ctrl-World imagined</strong> (tomato)</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline controls></video>
+      <div class="hero-flow">
+        <div class="hero-col">
+          <p class="hero-label has-text-centered"><strong>Ctrl-World imagined</strong> rollouts (tomato)</p>
+          <div class="hero-rollout-stack">
+            <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success.mp4" autoplay muted loop playsinline controls></video></div>
+            <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success2.mp4" autoplay muted loop playsinline controls></video></div>
           </div>
         </div>
-        <div class="column is-6">
-          <p class="has-text-centered mb-2"><strong>Finetuned policy</strong> (placeholder)</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline controls></video>
-          </div>
+        <div class="hero-arrow">&rarr;</div>
+        <div class="hero-col">
+          <p class="hero-label has-text-centered"><strong>Ctrl-World-finetuned policy</strong> on the real robot (tomato)</p>
+          <div class="media-stack hero-real-media"><video src="static/videos/real_robot/tomato_ours.mp4" autoplay muted loop playsinline controls></video></div>
         </div>
       </div>
 
       <div class="headline-card has-text-centered">
         <p class="big-stat">Tomato pickup: 60% &rarr; 100% success</p>
         <p class="mt-2">with Ctrl-World synthetic-rollout fine-tuning (base pi0.5 &rarr; DreamBC). Cube stays at 90% but trajectories become smoother.</p>
+      </div>
+
+      <h2 class="title is-4 section-heading has-text-centered">Real-robot rollouts</h2>
+      <p class="has-text-centered mb-4">The same task on the physical Franka under three policies &mdash; base pi0.5, the teleop-finetuned baseline, and our Ctrl-World-finetuned policy. Use the buttons to switch between the cube and tomato examples.</p>
+      <div class="columns compare-row">
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Base pi0.5</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_base.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_base.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Teleop-finetuned</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_teleop.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_teleop.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Ctrl-World-finetuned (ours)</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_ours.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_ours.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
       </div>
 
       <h2 class="title is-4 section-heading has-text-centered">Abstract</h2>
@@ -65,91 +103,49 @@
         <img src="static/images/pipeline.svg" alt="DreamBC pipeline" class="figure-img" style="display: block; max-width: 900px; margin: 0 auto;">
       </figure>
 
-      <h2 class="title is-4 section-heading has-text-centered">Trajectory comparison</h2>
-      <p class="has-text-centered mb-4">Real teleop demo &rarr; Ctrl-World imagined rollout &rarr; finetuned policy on robot (upload finetuned clips to <code>docs/static/videos/policy_rollout/</code>).</p>
-
-      <p class="has-text-weight-bold">Cube — put the orange block in the blue bowl</p>
-      <div class="columns compare-row">
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Real demo</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/real_demo/cube_demo_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/real_demo/cube_demo_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add cube_demo_03.mp4" hidden>
-          </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
-          </div>
+      <h2 class="title is-4 section-heading has-text-centered">Trajectory generation</h2>
+      <p class="has-text-centered mb-4">pi0.5 acts <em>inside</em> Ctrl-World: from a single real observation the world model is conditioned on, it imagines the trajectory forward frame by frame. The resulting imagined observation&ndash;action pairs are what we collect as behavior-cloning data.</p>
+      <div class="intro-flow intro-flow-large">
+        <div class="intro-item">
+          <div class="media-stack media-5panel"><img src="static/images/intro/cube_start.png" alt="Starting frame"></div>
+          <p class="has-text-centered is-size-7">Starting frame (conditioning observation)</p>
         </div>
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Ctrl-World imagined</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/dream_rollout/cube_dream_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/dream_rollout/cube_dream_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add cube_dream_03.mp4" hidden>
-          </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
-          </div>
-        </div>
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Ctrl-World FT policy</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/policy_rollout/cube_after_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/policy_rollout/cube_after_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add cube_after_03.mp4" hidden>
-          </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
-          </div>
+        <div class="intro-arrow">&rarr;</div>
+        <div class="intro-item">
+          <div class="media-stack media-5panel"><video src="static/videos/intro/cube_dream.mp4" autoplay muted loop playsinline controls></video></div>
+          <p class="has-text-centered is-size-7">Ctrl-World imagined rollout</p>
         </div>
       </div>
 
-      <p class="has-text-weight-bold mt-5">Tomato — pick up the tomato and place it in the blue bowl</p>
-      <div class="columns compare-row">
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Real demo</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/real_demo/tomato_demo_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/real_demo/tomato_demo_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add tomato_demo_03.mp4" hidden>
-          </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
-          </div>
+      <h2 class="title is-4 section-heading has-text-centered">Rollout samples</h2>
+      <p class="has-text-centered mb-4">Representative Ctrl-World imagined rollouts from dataset generation. We hand-labeled each trajectory as a clean <strong class="sample-success">success</strong> (usable for BC), an <strong class="sample-artifact">artifact success</strong> (task completes but the video is corrupted), or a <strong class="sample-fail">fail</strong>.</p>
+      <div class="sample-gallery" data-active-task="cube" data-active-outcome="success">
+        <div class="example-selector task-color-switch" data-switch="task">
+          <button type="button" data-value="cube" class="is-active">Cube</button>
+          <button type="button" data-value="tomato">Tomato</button>
         </div>
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Ctrl-World imagined</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/dream_rollout/tomato_dream_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/dream_rollout/tomato_dream_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add tomato_dream_03.mp4" hidden>
-          </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
-          </div>
+        <div class="example-selector outcome-color-switch" data-switch="outcome">
+          <button type="button" data-value="success" class="is-active">Success</button>
+          <button type="button" data-value="artifact">Artifact success</button>
+          <button type="button" data-value="fail">Fail</button>
         </div>
-        <div class="column compare-cell example-cell">
-          <p class="cell-label has-text-centered">Ctrl-World FT policy</p>
-          <div class="media-stack">
-            <video data-ex="1" src="static/videos/policy_rollout/tomato_after_01.mp4" autoplay muted loop playsinline></video>
-            <video data-ex="2" src="static/videos/policy_rollout/tomato_after_02.mp4" muted loop playsinline hidden></video>
-            <img data-ex="3" src="static/images/placeholder.svg" alt="Example 3 — add tomato_after_03.mp4" hidden>
+
+        <div class="sample-stack">
+          <div class="media-stack media-5panel">
+            <video data-task="cube" data-outcome="success" src="static/videos/rollout_samples/cube_success.mp4" autoplay muted loop playsinline controls></video>
+            <video data-task="tomato" data-outcome="success" src="static/videos/rollout_samples/tomato_success.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="artifact" src="static/videos/rollout_samples/cube_artifact.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="artifact" src="static/videos/rollout_samples/tomato_artifact.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="fail" src="static/videos/rollout_samples/cube_fail.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="fail" src="static/videos/rollout_samples/tomato_fail.mp4" muted loop playsinline controls hidden></video>
           </div>
-          <div class="example-selector">
-            <button type="button" data-ex="1" class="is-active">Example 1</button>
-            <button type="button" data-ex="2">Example 2</button>
-            <button type="button" data-ex="3">Example 3</button>
+          <div class="media-stack media-5panel">
+            <video data-task="cube" data-outcome="success" src="static/videos/rollout_samples/cube_success2.mp4" autoplay muted loop playsinline controls></video>
+            <video data-task="tomato" data-outcome="success" src="static/videos/rollout_samples/tomato_success2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="artifact" src="static/videos/rollout_samples/cube_artifact2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="artifact" src="static/videos/rollout_samples/tomato_artifact2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="fail" src="static/videos/rollout_samples/cube_fail2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="fail" src="static/videos/rollout_samples/tomato_fail2.mp4" muted loop playsinline controls hidden></video>
           </div>
         </div>
       </div>
@@ -158,18 +154,10 @@
         <a class="button is-link is-medium" href="writeup.html">Read the full report &rarr;</a>
       </div>
 
-      <h2 class="title is-4 section-heading">BibTeX</h2>
-      <pre class="bibtex">@misc{dreambc2026,
-  title={DreamBC: World Models for Robot Policy Improvement via Imagined Rollouts},
-  author={Bhat, Abhijnya and Chu, Wayne and Taylor, Olivia},
-  year={2026},
-  howpublished={\url{https://otaylor2023.github.io/DreamBC/}}
-}</pre>
     </div>
   </section>
 
   <footer class="footer has-text-centered">
-    <p>Template adapted from the <a href="https://nerfies.github.io/">Nerfies</a> academic project page.</p>
     <p><a href="https://github.com/otaylor2023/DreamBC">DreamBC</a> &middot; Stanford CS348K</p>
   </footer>
 
