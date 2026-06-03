@@ -8,7 +8,6 @@ We use **Ctrl-World** imagined rollouts as behavior-cloning data to adapt **pi0.
 |----------|------|
 | **Project site** | https://otaylor2023.github.io/DreamBC/ |
 | **Full report** | [docs/report.html](docs/report.html) |
-| **Checkpoints (deployed)** | [Google Drive](https://drive.google.com/drive/folders/1sf-Qj9_gY3ynb-RupmyR7Qj6ogZRNK-J?usp=sharing) |
 | **Checkpoint portfolio (metadata)** | [real_robot_checkpoints/](real_robot_checkpoints/) |
 | **Curated media** | [assets/](assets/) → built into [docs/static/](docs/static/) |
 | **Results index** | [results/](results/) |
