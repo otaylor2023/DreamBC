@@ -2,6 +2,9 @@
 
 World-model policy improvement pipeline for robot manipulation in simulation and real-robot settings using Ctrl-World imagined rollouts and behavior cloning.
 
+## Final Report
+https://docs.google.com/document/d/1odM9GF-Pmqk3XJ_2HiZ-iAMGKYLHIHZ-EvoGepL-4_8/edit?usp=sharing
+
 ## Week 6 Checkpoint
 ### Project Questions / Goals
 
