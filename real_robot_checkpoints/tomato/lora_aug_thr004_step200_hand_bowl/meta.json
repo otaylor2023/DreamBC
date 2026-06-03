@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/lora_aug_thr004_step200_hand_bowl",
+  "dest_name": "lora_aug_thr004_step200_hand_bowl",
+  "source_exp": "handcollected_tomato_lora_aug",
+  "source_step": 200,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": true,
+  "loss_threshold": 0.04,
+  "ema_loss": 0.03828,
+  "train_step": 200,
+  "prompt": "pick the tomato and place it in the blue bowl",
+  "recommended_for_robot": false,
+  "rationale": "hand-collected demos; exterior_2 + wrist; bowl prompt",
+  "eval_train_config": "dreambc_lora"
+}

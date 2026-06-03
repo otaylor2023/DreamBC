@@ -1,0 +1,17 @@
+{
+  "task": "cube",
+  "path": "real_robot_checkpoints/cube/lora_aug_thr004_step225_hand",
+  "dest_name": "lora_aug_thr004_step225_hand",
+  "source_exp": "handcollected_cube_lora_aug",
+  "source_step": 225,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": true,
+  "loss_threshold": 0.04,
+  "ema_loss": 0.03427999999999999,
+  "train_step": 225,
+  "prompt": "put the orange block in the blue bowl",
+  "recommended_for_robot": false,
+  "rationale": "hand-collected demos; exterior_2 + wrist",
+  "eval_train_config": "dreambc_lora"
+}

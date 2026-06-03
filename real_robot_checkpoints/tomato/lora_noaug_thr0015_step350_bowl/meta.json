@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/lora_noaug_thr0015_step350_bowl",
+  "dest_name": "lora_noaug_thr0015_step350_bowl",
+  "source_exp": "tomato_t24_lora_bowl_noaug",
+  "source_step": 350,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": false,
+  "loss_threshold": 0.015,
+  "ema_loss": 0.01446,
+  "train_step": 350,
+  "prompt": "pick the tomato and place it in the blue bowl",
+  "recommended_for_robot": true,
+  "rationale": "recommended #6: near-converged LoRA (bowl prompt)",
+  "eval_train_config": "dreambc_lora"
+}

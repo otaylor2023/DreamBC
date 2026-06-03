@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/lora_noaug_thr004_step200",
+  "dest_name": "lora_noaug_thr004_step200",
+  "source_exp": "tomato_t24_lora_v1_noaug",
+  "source_step": 200,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": false,
+  "loss_threshold": 0.04,
+  "ema_loss": null,
+  "train_step": 200,
+  "prompt": "Pick the tomato",
+  "recommended_for_robot": true,
+  "rationale": "early-checkpoint hypothesis",
+  "eval_train_config": "dreambc_lora"
+}

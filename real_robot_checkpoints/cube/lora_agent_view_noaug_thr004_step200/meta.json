@@ -1,0 +1,17 @@
+{
+  "task": "cube",
+  "path": "real_robot_checkpoints/cube/lora_agent_view_noaug_thr004_step200",
+  "dest_name": "lora_agent_view_noaug_thr004_step200",
+  "source_exp": "cube_c16_lora_agent_view_noaug",
+  "source_step": 200,
+  "method": "lora",
+  "variant": "lora",
+  "augmentation": false,
+  "loss_threshold": 0.04,
+  "ema_loss": 0.03278,
+  "train_step": 200,
+  "prompt": "put the orange block in the blue bowl",
+  "recommended_for_robot": true,
+  "rationale": "agent_view exterior (LoRA sweet spot)",
+  "eval_train_config": "dreambc_lora"
+}

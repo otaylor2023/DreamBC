@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DreamBC: Robot Policy Improvement via World Model Rollouts and Behavior Cloning</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="static/css/index.css?v=6">
+  <meta name="description" content="DreamBC: Ctrl-World imagined rollouts for pi0.5 fine-tuning on real-robot manipulation.">
+</head>
+<body>
+  <section class="hero is-light">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <h1 class="publication-title">DreamBC: Robot Policy Improvement via World Model Rollouts and Behavior Cloning</h1>
+        <p class="publication-authors is-size-5">
+          <a href="mailto:abhijnya@stanford.edu">Abhijnya Bhat</a>,
+          <a href="mailto:waynechu@stanford.edu">Wayne Chu</a>,
+          <a href="mailto:otaylor@stanford.edu">Olivia Taylor</a>
+          <br><span class="is-size-6">Stanford CS348K</span>
+        </p>
+        <div class="buttons is-centered mt-4">
+          <a class="button is-dark" href="https://github.com/otaylor2023/DreamBC"><span class="icon"><i class="fab fa-github"></i></span><span>Code</span></a>
+          <a class="button is-link is-light" href="report.html"><span class="icon"><i class="fas fa-book"></i></span><span>Full report</span></a>
+          <a class="button is-link is-light" href="https://drive.google.com/drive/folders/1sf-Qj9_gY3ynb-RupmyR7Qj6ogZRNK-J?usp=sharing"><span class="icon"><i class="fas fa-database"></i></span><span>Checkpoints</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section pt-4">
+    <div class="container">
+      <div class="hero-flow">
+        <p class="hero-label has-text-centered hero-cell-l1"><strong>Ctrl-World imagined</strong> rollouts<br>(tomato)</p>
+        <p class="hero-label has-text-centered hero-cell-r1"><strong>Ctrl-World-finetuned policy</strong><br>on the real robot (tomato)</p>
+        <div class="hero-rollout-stack hero-cell-l2">
+          <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success.mp4" autoplay muted loop playsinline controls></video></div>
+          <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success2.mp4" autoplay muted loop playsinline controls></video></div>
+        </div>
+        <div class="hero-arrow">&rarr;</div>
+        <div class="media-stack hero-real-media hero-cell-r2"><video src="static/videos/real_robot/tomato_ours.mp4" autoplay muted loop playsinline controls></video></div>
+      </div>
+
+      <div class="headline-card has-text-centered">
+        <p class="big-stat">Tomato pickup: 60% &rarr; 100% success</p>
+        <p class="mt-2">with Ctrl-World synthetic-rollout fine-tuning (base pi0.5 &rarr; DreamBC). Cube stays at 90% but trajectories become smoother.</p>
+      </div>
+
+      <h2 class="title is-4 section-heading has-text-centered">Real-robot rollouts</h2>
+      <p class="has-text-centered mb-4">The same task on the physical Franka under three policies &mdash; base pi0.5, the teleop-finetuned baseline, and our Ctrl-World-finetuned policy. Use the buttons to switch between the cube and tomato examples.</p>
+      <div class="columns compare-row">
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Base pi0.5</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_base.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_base.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Teleop-finetuned</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_teleop.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_teleop.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
+        <div class="column compare-cell example-cell">
+          <p class="cell-label has-text-centered">Ctrl-World-finetuned (ours)</p>
+          <div class="media-stack">
+            <video data-ex="1" src="static/videos/real_robot/cube_ours.mp4" autoplay muted loop playsinline controls></video>
+            <video data-ex="2" src="static/videos/real_robot/tomato_ours.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="example-selector">
+            <button type="button" data-ex="1" class="is-active">Cube</button>
+            <button type="button" data-ex="2">Tomato</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="title is-4 section-heading has-text-centered">Abstract</h2>
+      <p>
+        Generalist vision-language-action policies like <strong>pi0.5</strong> often degrade on new real-world setups.
+        We study whether <strong>Ctrl-World</strong> imagined trajectories can replace expensive teleoperation for task-specific adaptation.
+        Starting from real Franka snapshots and language instructions, pi0.5 acts inside the world model; successful rollouts become behavior-cloning data for LoRA fine-tuning.
+        On real-robot evaluation, tomato pickup improves from <strong>60% to 100%</strong> success; cube pickup remains at <strong>90%</strong> with qualitatively smoother motion.
+      </p>
+
+      <h2 class="title is-4 section-heading has-text-centered">Pipeline</h2>
+      <figure class="has-text-centered">
+        <img src="static/images/pipeline.svg" alt="DreamBC pipeline" class="figure-img" style="display: block; max-width: 900px; margin: 0 auto;">
+      </figure>
+
+      <h2 class="title is-4 section-heading has-text-centered">Trajectory generation</h2>
+      <p class="has-text-centered mb-4">pi0.5 acts <em>inside</em> Ctrl-World: from a single real observation the world model is conditioned on, it imagines the trajectory forward frame by frame. The resulting imagined observation&ndash;action pairs are what we collect as behavior-cloning data.</p>
+      <div class="intro-flow intro-flow-large">
+        <div class="intro-item">
+          <div class="media-stack media-5panel"><img src="static/images/intro/cube_start.png" alt="Starting frame"></div>
+          <p class="has-text-centered is-size-7">Starting frame (conditioning observation)</p>
+        </div>
+        <div class="intro-arrow">&rarr;</div>
+        <div class="intro-item">
+          <div class="media-stack media-5panel"><video src="static/videos/intro/cube_dream.mp4" autoplay muted loop playsinline controls></video></div>
+          <p class="has-text-centered is-size-7">Ctrl-World imagined rollout</p>
+        </div>
+      </div>
+
+      <h2 class="title is-4 section-heading has-text-centered">Rollout samples</h2>
+      <p class="has-text-centered mb-4">Representative Ctrl-World imagined rollouts from dataset generation. We hand-labeled each trajectory as a clean <strong class="sample-success">success</strong> (usable for BC), an <strong class="sample-artifact">artifact success</strong> (task completes but the video is corrupted), or a <strong class="sample-fail">fail</strong>.</p>
+      <div class="sample-gallery" data-active-task="cube" data-active-outcome="success">
+        <div class="example-selector task-color-switch" data-switch="task">
+          <button type="button" data-value="cube" class="is-active">Cube</button>
+          <button type="button" data-value="tomato">Tomato</button>
+        </div>
+        <div class="example-selector outcome-color-switch" data-switch="outcome">
+          <button type="button" data-value="success" class="is-active">Success</button>
+          <button type="button" data-value="artifact">Artifact success</button>
+          <button type="button" data-value="fail">Fail</button>
+        </div>
+
+        <div class="sample-stack">
+          <div class="media-stack media-5panel">
+            <video data-task="cube" data-outcome="success" src="static/videos/rollout_samples/cube_success.mp4" autoplay muted loop playsinline controls></video>
+            <video data-task="tomato" data-outcome="success" src="static/videos/rollout_samples/tomato_success.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="artifact" src="static/videos/rollout_samples/cube_artifact.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="artifact" src="static/videos/rollout_samples/tomato_artifact.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="fail" src="static/videos/rollout_samples/cube_fail.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="fail" src="static/videos/rollout_samples/tomato_fail.mp4" muted loop playsinline controls hidden></video>
+          </div>
+          <div class="media-stack media-5panel">
+            <video data-task="cube" data-outcome="success" src="static/videos/rollout_samples/cube_success2.mp4" autoplay muted loop playsinline controls></video>
+            <video data-task="tomato" data-outcome="success" src="static/videos/rollout_samples/tomato_success2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="artifact" src="static/videos/rollout_samples/cube_artifact2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="artifact" src="static/videos/rollout_samples/tomato_artifact2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="cube" data-outcome="fail" src="static/videos/rollout_samples/cube_fail2.mp4" muted loop playsinline controls hidden></video>
+            <video data-task="tomato" data-outcome="fail" src="static/videos/rollout_samples/tomato_fail2.mp4" muted loop playsinline controls hidden></video>
+          </div>
+        </div>
+      </div>
+
+      <div class="has-text-centered mt-6">
+        <a class="button is-link is-medium" href="report.html">Read the full report &rarr;</a>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer has-text-centered">
+    <p><a href="https://github.com/otaylor2023/DreamBC">DreamBC</a> &middot; Stanford CS348K</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/js/bulma-carousel.min.js" defer></script>
+  <script src="static/js/index.js?v=5" defer></script>
+</body>
+</html>

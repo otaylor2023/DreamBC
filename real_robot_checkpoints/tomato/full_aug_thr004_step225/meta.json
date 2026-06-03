@@ -1,0 +1,17 @@
+{
+  "task": "tomato",
+  "path": "real_robot_checkpoints/tomato/full_aug_thr004_step225",
+  "dest_name": "full_aug_thr004_step225",
+  "source_exp": "tomato_t24_full_v1_aug",
+  "source_step": 225,
+  "method": "full",
+  "variant": "full",
+  "augmentation": true,
+  "loss_threshold": 0.04,
+  "ema_loss": null,
+  "train_step": 225,
+  "prompt": "Pick the tomato",
+  "recommended_for_robot": false,
+  "rationale": "extra capacity + regularized (superseded by _bowl retrain)",
+  "eval_train_config": "dreambc_full"
+}
