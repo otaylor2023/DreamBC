@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate the three-way comparison videos for docs/writeup.html section 3.5.
+"""Regenerate the three-way comparison videos for docs/report.html section 3.5.
 
 - Real demos: extract 3 hand-collected demos per task from cube.zip / tomato.zip,
   stack views in Ctrl-World order [agent_view, exterior_2, wrist], encode to mp4.

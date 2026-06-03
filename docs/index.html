@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/css/bulma-carousel.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="static/css/index.css">
+  <link rel="stylesheet" href="static/css/index.css?v=6">
   <meta name="description" content="DreamBC: Ctrl-World imagined rollouts for pi0.5 fine-tuning on real-robot manipulation.">
 </head>
 <body>
@@ -23,8 +23,8 @@
         </p>
         <div class="buttons is-centered mt-4">
           <a class="button is-dark" href="https://github.com/otaylor2023/DreamBC"><span class="icon"><i class="fab fa-github"></i></span><span>Code</span></a>
-          <a class="button is-link is-light" href="writeup.html"><span class="icon"><i class="fas fa-book"></i></span><span>Full report</span></a>
-          <a class="button is-link is-light" href="https://github.com/otaylor2023/DreamBC/tree/main/real_robot_checkpoints"><span class="icon"><i class="fas fa-database"></i></span><span>Checkpoints</span></a>
+          <a class="button is-link is-light" href="report.html"><span class="icon"><i class="fas fa-book"></i></span><span>Full report</span></a>
+          <a class="button is-link is-light" href="https://drive.google.com/drive/folders/1sf-Qj9_gY3ynb-RupmyR7Qj6ogZRNK-J?usp=sharing"><span class="icon"><i class="fas fa-database"></i></span><span>Checkpoints</span></a>
         </div>
       </div>
     </div>
@@ -33,18 +33,14 @@
   <section class="section pt-4">
     <div class="container">
       <div class="hero-flow">
-        <div class="hero-col">
-          <p class="hero-label has-text-centered"><strong>Ctrl-World imagined</strong> rollouts (tomato)</p>
-          <div class="hero-rollout-stack">
-            <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success.mp4" autoplay muted loop playsinline controls></video></div>
-            <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success2.mp4" autoplay muted loop playsinline controls></video></div>
-          </div>
+        <p class="hero-label has-text-centered hero-cell-l1"><strong>Ctrl-World imagined</strong> rollouts<br>(tomato)</p>
+        <p class="hero-label has-text-centered hero-cell-r1"><strong>Ctrl-World-finetuned policy</strong><br>on the real robot (tomato)</p>
+        <div class="hero-rollout-stack hero-cell-l2">
+          <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success.mp4" autoplay muted loop playsinline controls></video></div>
+          <div class="media-stack media-5panel"><video src="static/videos/rollout_samples/tomato_success2.mp4" autoplay muted loop playsinline controls></video></div>
         </div>
         <div class="hero-arrow">&rarr;</div>
-        <div class="hero-col">
-          <p class="hero-label has-text-centered"><strong>Ctrl-World-finetuned policy</strong> on the real robot (tomato)</p>
-          <div class="media-stack hero-real-media"><video src="static/videos/real_robot/tomato_ours.mp4" autoplay muted loop playsinline controls></video></div>
-        </div>
+        <div class="media-stack hero-real-media hero-cell-r2"><video src="static/videos/real_robot/tomato_ours.mp4" autoplay muted loop playsinline controls></video></div>
       </div>
 
       <div class="headline-card has-text-centered">
@@ -151,7 +147,7 @@
       </div>
 
       <div class="has-text-centered mt-6">
-        <a class="button is-link is-medium" href="writeup.html">Read the full report &rarr;</a>
+        <a class="button is-link is-medium" href="report.html">Read the full report &rarr;</a>
       </div>
 
     </div>
@@ -162,6 +158,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.24/dist/js/bulma-carousel.min.js" defer></script>
-  <script src="static/js/index.js" defer></script>
+  <script src="static/js/index.js?v=5" defer></script>
 </body>
 </html>

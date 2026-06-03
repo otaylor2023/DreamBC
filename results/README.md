@@ -9,6 +9,6 @@ Machine-readable and human-readable **evaluation outputs** (not multi-GB checkpo
 | Portfolio manifest | `real_robot_checkpoints/MANIFEST.json` |
 | Training example exports | `real_robot_checkpoints/docs/handcollected_training_examples/` |
 | Public site | https://otaylor2023.github.io/DreamBC/ |
-| Full writeup (rendered) | https://otaylor2023.github.io/DreamBC/writeup.html |
+| Full report (rendered) | https://otaylor2023.github.io/DreamBC/report.html |
 
 Checkpoint **weights** (`params/`, `train_state/`) stay on the training machine and are gitignored.

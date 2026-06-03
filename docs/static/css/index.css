@@ -81,6 +81,18 @@ body {
   background: #111;
 }
 
+.video-click-controls {
+  cursor: pointer;
+}
+
+.video-click-controls:not([controls])::-webkit-media-controls {
+  display: none !important;
+}
+
+.video-click-controls:not([controls])::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
 .media-stack > [data-ex][hidden] {
   display: none !important;
 }
@@ -163,50 +175,53 @@ body {
   gap: 1.25rem;
 }
 
+/* Two-row grid: titles on row 1, videos on row 2. The arrow lives in the
+   video row and is centered there, so it stays at the vertical middle of the
+   clips no matter how the titles wrap. */
 .hero-flow {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 1rem;
+  row-gap: 0.55rem;
   max-width: 1080px;
-  margin: 0 auto;
+  margin: 2rem auto 0;
+  align-items: stretch;
 }
 
-.hero-col {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
+.hero-cell-l1 { grid-column: 1; grid-row: 1; min-width: 0; }
+.hero-cell-r1 { grid-column: 3; grid-row: 1; min-width: 0; }
+.hero-cell-l2 { grid-column: 1; grid-row: 2; min-width: 0; }
+.hero-cell-r2 { grid-column: 3; grid-row: 2; min-width: 0; min-height: 0; }
 
 .hero-arrow {
-  flex: 0 0 auto;
+  grid-column: 2;
+  grid-row: 2;
   align-self: center;
-  /* The column also contains the title label at the top, so plain centering
-     sits slightly high; nudge down to the vertical middle of the videos. */
-  margin-top: 4.55rem;
+  justify-self: center;
   font-size: 2rem;
   color: #555;
   line-height: 1;
 }
 
 .hero-label {
-  min-height: 4rem;
-  margin-bottom: 0.55rem;
+  margin: 0;
   font-size: 0.95rem;
-  padding-top: 1.9rem;
+  line-height: 1.35;
+  align-self: start;
 }
 
 .hero-rollout-stack {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  height: 100%;
 }
 
 .hero-real-media {
-  flex: 1 1 auto;
+  height: 100%;
+  min-height: 100%;
   aspect-ratio: auto;
-  min-height: 0;
 }
 
 .hero-real-media > video,
@@ -420,11 +435,16 @@ body {
   margin-right: auto;
 }
 
-/* Wider panel for the imagined-vs-teleop 5:1 clips so they read larger. */
+/* Imagined-vs-teleop clips: stacked vertically and sized like the
+   landing-page rollout-samples gallery. */
 .interpretation-panel-wide {
-  max-width: 1180px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: min(900px, 100%);
+  max-width: none;
   margin-left: auto;
   margin-right: auto;
+  transform: none;
 }
 
 .interpretation-copy {
@@ -441,11 +461,16 @@ body {
   height: 0.75rem;
 }
 
-/* Enlarged failure-case artifact clips. */
+/* Failure-case artifact clips: stacked vertically and sized like the
+   landing-page rollout-samples gallery. */
 .failure-panel-wide {
-  max-width: 1180px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: min(960px, 100%);
+  max-width: none;
   margin-left: auto;
   margin-right: auto;
+  transform: none;
 }
 
 /* Stand-alone figure sized to match one panel of a .two-up row above it. */

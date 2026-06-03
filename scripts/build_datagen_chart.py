@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the dataset-generation 'generated vs kept' bar chart for the writeup."""
+"""Render the dataset-generation 'generated vs kept' bar chart for the full report."""
 
 import os
 import matplotlib as mpl

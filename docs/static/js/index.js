@@ -210,7 +210,27 @@ function initTaskGroups() {
   });
 }
 
+/** Native controls hidden until the user clicks the video (fixes Safari showing
+ *  control chrome on every autoplay clip at load). */
+function initClickToShowControls() {
+  document.querySelectorAll("video[controls]").forEach((video) => {
+    video.removeAttribute("controls");
+    video.classList.add("video-click-controls");
+
+    video.addEventListener(
+      "click",
+      () => {
+        if (!video.hasAttribute("controls")) {
+          video.setAttribute("controls", "");
+        }
+      },
+      { passive: true }
+    );
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  initClickToShowControls();
   initExampleCells();
   initExampleGroups();
   initTaskOnlyGroups();

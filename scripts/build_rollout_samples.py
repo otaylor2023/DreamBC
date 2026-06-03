@@ -40,7 +40,7 @@ PICKS: dict[str, dict[str, Path]] = {
         "fail": REPO
         / "rollouts/TL_g3_red_ball/Rollouts_interact_pi/video/pickplace_time_20260531_034005_traj_0042_0_2_put_the_small_red_ball_in_the_blue_bowl.mp4",
         "fail2": REPO
-        / "rollouts/TL_g3_red_ball/Rollouts_interact_pi/video/pickplace_time_20260531_040433_traj_0090_0_2_put_the_small_red_ball_in_the_blue_bowl.mp4",
+        / "rollouts/TL_g3_red_ball/Rollouts_interact_pi/video/pickplace_time_20260531_070409_traj_0011_0_2_put_the_small_red_ball_in_the_blue_bowl.mp4",
     },
 }
 
